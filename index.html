@@ -1,0 +1,2073 @@
+<!doctype html>
+<html lang="ru" data-theme="noir" data-density="comfortable">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="color-scheme" content="dark light" />
+  <title>Литобзор · Мониторинг источников</title>
+
+  <!-- Optional: offline first. If you put xlsx.full.min.js next to this HTML, it will be used. -->
+  <script src="xlsx.full.min.js" defer></script>
+
+  <style>
+    :root{
+      --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+
+      /* monochrome palette */
+      --bg: #0b0c0e;
+      --panel: rgba(255,255,255,.045);
+      --panel2: rgba(255,255,255,.030);
+      --border: rgba(255,255,255,.10);
+      --border2: rgba(255,255,255,.18);
+      --text: rgba(255,255,255,.86);
+      --muted: rgba(255,255,255,.62);
+      --muted2: rgba(255,255,255,.42);
+
+      --focus: 0 0 0 3px rgba(255,255,255,.20);
+      --shadow: 0 22px 60px rgba(0,0,0,.55);
+
+      --ok: rgba(255,255,255,.86);
+      --warn: rgba(255,255,255,.86);
+      --bad: rgba(255,255,255,.86);
+
+      --link: rgba(255,255,255,.88);
+
+      --radius: 18px;
+      --radius2: 14px;
+
+      --pad: 16px;
+      --padSm: 12px;
+
+      --grid: rgba(255,255,255,.045);
+      --noise: .035;
+
+      --theadBg: rgba(10,11,13,.96);
+      --hoverRow: rgba(255,255,255,.040);
+
+      --scroll: rgba(255,255,255,.22);
+      --scrollHover: rgba(255,255,255,.32);
+
+      --btnBg: rgba(255,255,255,.06);
+      --btnBgHover: rgba(255,255,255,.095);
+      --btnBorder: rgba(255,255,255,.12);
+      --btnBorderHover: rgba(255,255,255,.18);
+    }
+
+    html[data-theme="paper"]{
+      --bg: #fafafa;
+      --panel: rgba(0,0,0,.040);
+      --panel2: rgba(0,0,0,.028);
+      --border: rgba(0,0,0,.10);
+      --border2: rgba(0,0,0,.16);
+      --text: rgba(0,0,0,.86);
+      --muted: rgba(0,0,0,.62);
+      --muted2: rgba(0,0,0,.46);
+      --focus: 0 0 0 3px rgba(0,0,0,.18);
+      --shadow: 0 22px 60px rgba(0,0,0,.18);
+      --grid: rgba(0,0,0,.045);
+      --theadBg: rgba(250,250,250,.98);
+      --hoverRow: rgba(0,0,0,.04);
+      --scroll: rgba(0,0,0,.18);
+      --scrollHover: rgba(0,0,0,.28);
+      --btnBg: rgba(0,0,0,.05);
+      --btnBgHover: rgba(0,0,0,.08);
+      --btnBorder: rgba(0,0,0,.12);
+      --btnBorderHover: rgba(0,0,0,.18);
+      --link: rgba(0,0,0,.84);
+    }
+
+    html[data-density="compact"]{
+      --pad: 12px;
+      --padSm: 10px;
+    }
+
+    *{ box-sizing: border-box; }
+    html, body { height: 100%; }
+    body{
+      margin: 0;
+      font-family: var(--font);
+      color: var(--text);
+      background: var(--bg);
+      overflow-x: hidden;
+    }
+
+    /* Futuristic subtle grid */
+    body::before{
+      content:"";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        linear-gradient(var(--grid) 1px, transparent 1px) 0 0/ 36px 36px,
+        linear-gradient(90deg, var(--grid) 1px, transparent 1px) 0 0/ 36px 36px;
+      opacity: .55;
+      mix-blend-mode: overlay;
+    }
+
+    /* Noise */
+    body::after{
+      content:"";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: var(--noise);
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='260' height='260'><filter id='n'>  <feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='260' height='260' filter='url(%23n)' opacity='0.85'/></svg>");
+      background-repeat: repeat;
+      mix-blend-mode: overlay;
+    }
+
+    a{ color: var(--link); text-decoration: none; }
+    a:hover{ text-decoration: underline; }
+    .hidden{ display:none !important; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar{ width: 10px; height: 10px; }
+    ::-webkit-scrollbar-track{ background: transparent; }
+    ::-webkit-scrollbar-thumb{ background: var(--scroll); border-radius: 999px; }
+    ::-webkit-scrollbar-thumb:hover{ background: var(--scrollHover); }
+
+    /* Layout */
+    .topbar{
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      background: color-mix(in srgb, var(--bg) 82%, transparent);
+      border-bottom: 1px solid var(--border);
+    }
+    .topbar-inner{
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 14px 18px;
+      display:flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .brand{ display:flex; gap: 12px; align-items: center; }
+    .logo{
+      width: 42px;
+      height: 42px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background:
+        radial-gradient(circle at 30% 25%, rgba(255,255,255,.18), transparent 55%),
+        linear-gradient(135deg, rgba(255,255,255,.12), transparent 55%);
+      box-shadow: 0 14px 34px rgba(0,0,0,.25);
+      position: relative;
+      overflow: hidden;
+    }
+    .logo::before{
+      content:"";
+      position:absolute;
+      inset:-30%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,.18), transparent);
+      transform: rotate(22deg);
+      animation: sweep 4.5s linear infinite;
+      opacity: .55;
+    }
+    @keyframes sweep {
+      from{ transform: translateX(-45%) rotate(22deg); }
+      to{ transform: translateX(45%) rotate(22deg); }
+    }
+    h1{
+      margin: 0;
+      font-size: 14px;
+      letter-spacing: .22px;
+      font-weight: 860;
+    }
+    .sub{
+      margin-top: 2px;
+      font-size: 12px;
+      color: var(--muted);
+      font-family: var(--mono);
+    }
+
+    .actions{ display:flex; align-items:center; gap: 10px; flex-wrap: wrap; }
+    .chip{
+      display:inline-flex;
+      align-items:center;
+      gap: 8px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--panel2);
+      font-size: 12px;
+      color: var(--muted);
+      user-select: none;
+    }
+    .dot{ width: 8px; height: 8px; border-radius: 999px; background: var(--muted2); box-shadow: 0 0 0 3px rgba(255,255,255,.06); }
+    .dot.ok{ background: var(--text); }
+    .dot.warn{ background: var(--muted); }
+
+    .btn{
+      border: 1px solid var(--btnBorder);
+      background: var(--btnBg);
+      color: var(--text);
+      border-radius: 999px;
+      padding: 10px 12px;
+      font-size: 13px;
+      font-weight: 850;
+      cursor: pointer;
+      transition: transform .12s ease, background .12s ease, border-color .12s ease;
+    }
+    .btn:hover{ transform: translateY(-1px); background: var(--btnBgHover); border-color: var(--btnBorderHover); }
+    .btn:active{ transform: translateY(0px); }
+    .btn:focus-visible{ outline: none; box-shadow: var(--focus); }
+    .btn.small{ padding: 8px 10px; font-size: 12px; }
+    .btn.ghost{ background: transparent; }
+    .btn.danger{ border-color: color-mix(in srgb, var(--border2) 30%, transparent); }
+    .btn.primary{ border-color: var(--border2); }
+    .btn.good{ border-color: var(--border2); }
+    .btn.icon{ padding: 10px 11px; font-family: var(--mono); }
+
+    .spacer{ flex: 1 1 auto; }
+
+    .menu{ position: relative; }
+    .menuList{
+      position: absolute;
+      right: 0;
+      top: calc(100% + 10px);
+      min-width: 260px;
+      background: color-mix(in srgb, var(--bg) 86%, transparent);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      padding: 8px;
+      display:none;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+    .menu.open .menuList{ display:block; }
+    .menuItem{
+      width: 100%;
+      text-align: left;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text);
+      padding: 10px 10px;
+      border-radius: 12px;
+      cursor:pointer;
+      display:flex;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 13px;
+      font-weight: 820;
+    }
+    .menuItem:hover{ background: var(--panel); border-color: var(--border); }
+    .menuSep{ height: 1px; background: var(--border); margin: 6px 0; opacity: .85; }
+    .hint{ font-size: 12px; color: var(--muted); font-weight: 760; }
+
+    .toggleRow{ display:flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 999px; background: var(--panel2); }
+    .toggleRow .txt{ font-size: 12px; color: var(--muted); font-weight: 860; }
+    .toggle input{ display:none; }
+    .switch{ width: 44px; height: 24px; border-radius: 999px; background: var(--btnBg); border: 1px solid var(--border); position: relative; display:inline-block; }
+    .knob{ width: 18px; height: 18px; border-radius: 999px; background: var(--text); opacity:.85; position:absolute; top: 2px; left: 2px; transition: transform .16s ease; }
+    .toggle input:checked + .switch .knob{ transform: translateX(20px); }
+    .toggle input:checked + .switch{ background: var(--btnBgHover); border-color: var(--border2); }
+
+    .app{ max-width: 1240px; margin: 0 auto; padding: 16px 18px 40px; }
+    .shell{ display:grid; grid-template-columns: 1fr 380px; gap: 14px; }
+    @media (max-width: 980px){ .shell{ grid-template-columns: 1fr; } }
+
+    .panel{
+      border: 1px solid var(--border);
+      background: color-mix(in srgb, var(--bg) 66%, var(--panel));
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .panel-hd{ padding: 14px 14px; border-bottom: 1px solid var(--border); display:flex; align-items:center; justify-content: space-between; gap: 10px; }
+    .panel-hd .title{ margin:0; font-size: 12px; font-family: var(--mono); text-transform: uppercase; letter-spacing: .38px; color: var(--muted); }
+    .panel-hd .hint{ margin: 0; font-size: 12px; color: var(--muted); }
+    .panel-bd{ padding: 14px 14px; }
+
+    .tabs{ display:flex; gap: 8px; align-items:center; }
+    .tab{
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      border-radius: 999px;
+      padding: 10px 12px;
+      font-size: 13px;
+      cursor: pointer;
+      font-weight: 850;
+      transition: transform .12s ease, background .12s ease, border-color .12s ease, color .12s ease;
+    }
+    .tab:hover{ transform: translateY(-1px); border-color: var(--border2); }
+    .tab.active{ background: var(--panel); color: var(--text); border-color: var(--border2); }
+
+    /* Controls */
+    .controls{ display:grid; grid-template-columns: 1.1fr 1fr 1fr; gap: 10px; margin-top: 12px; }
+    @media (max-width: 720px){ .controls{ grid-template-columns: 1fr; } }
+
+    .field label{ display:block; font-size: 11px; color: var(--muted); font-weight: 900; margin: 0 0 6px 2px; letter-spacing: .35px; text-transform: uppercase; font-family: var(--mono); }
+    .input, select, textarea{
+      width: 100%;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      padding: 12px 12px;
+      background: var(--panel2);
+      color: var(--text);
+      font-size: 14px;
+      outline: none;
+      transition: box-shadow .12s ease, background .12s ease, border-color .12s ease;
+    }
+    textarea{ min-height: 92px; resize: vertical; }
+    .input:focus, select:focus, textarea:focus{ box-shadow: var(--focus); border-color: var(--border2); background: var(--panel); }
+
+    /* List */
+    .list{ display:flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+    .card{
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--panel);
+      overflow: hidden;
+      display:flex;
+      gap: 12px;
+      justify-content: space-between;
+      padding: 12px 12px;
+    }
+    html[data-density="compact"] .card{ padding: 10px 10px; }
+    .card.ok{ border-color: color-mix(in srgb, var(--border2) 55%, transparent); }
+    .card.warn{ border-color: color-mix(in srgb, var(--border2) 40%, transparent); }
+    .card.bad{ border-color: color-mix(in srgb, var(--border2) 28%, transparent); opacity: .96; }
+
+    .card-main{ flex: 1 1 auto; min-width: 0; }
+    .row{ display:flex; justify-content: space-between; align-items: flex-start; gap: 10px; flex-wrap: wrap; }
+    .name{ margin: 0; font-weight: 900; letter-spacing: .18px; line-height: 1.25; }
+    .meta{ margin-top: 8px; display:flex; gap: 10px; align-items:center; flex-wrap: wrap; }
+    .pill{
+      display:inline-flex; align-items:center; gap: 8px;
+      font-size: 12px; font-weight: 860;
+      padding: 7px 10px; border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--panel2); color: var(--muted);
+      font-family: var(--mono);
+    }
+
+    .tag{
+      display:inline-flex; align-items:center; gap: 8px;
+      font-size: 12px; font-weight: 900;
+      padding: 7px 10px; border-radius: 999px;
+      border: 1px solid var(--border2);
+      background: transparent;
+      color: var(--text);
+      font-family: var(--mono);
+      white-space: nowrap;
+    }
+    .tag::before{ content:""; width: 7px; height: 7px; border-radius: 999px; background: currentColor; opacity: .85; }
+    .tag.bad{ opacity: .75; }
+
+    .mini{ margin-top: 10px; display:grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    @media (max-width: 820px){ .mini{ grid-template-columns: 1fr 1fr; } }
+    .box{ border: 1px solid var(--border); background: var(--panel2); border-radius: 14px; padding: 10px 10px; }
+    .lab{ font-size: 10px; color: var(--muted2); letter-spacing: .32px; font-family: var(--mono); text-transform: uppercase; }
+    .val{ margin-top: 6px; font-size: 13px; font-weight: 860; }
+
+    .card-actions{ display:flex; flex-direction: column; gap: 8px; align-items: stretch; }
+    @media (max-width: 720px){ .card-actions{ flex-direction: row; flex-wrap: wrap; } }
+
+    details summary{ cursor:pointer; color: var(--muted); font-weight: 850; margin-top: 12px; font-family: var(--mono); }
+    details summary:hover{ color: var(--text); }
+    .hist-list{ display:flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+    .hist-item{ border: 1px solid var(--border); background: var(--panel2); border-radius: 16px; padding: 10px 10px; }
+    .hist-top{ display:flex; justify-content: space-between; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .hist-grid{ margin-top: 10px; display:grid; grid-template-columns: 1fr 1fr; gap: 8px 10px; }
+    @media (max-width: 720px){ .hist-grid{ grid-template-columns: 1fr; } }
+    .kv{ display:flex; flex-direction: column; gap: 4px; }
+    .kv .k{ font-size: 10px; color: var(--muted2); text-transform: uppercase; letter-spacing: .32px; font-weight: 900; font-family: var(--mono); }
+    .kv .v{ font-size: 13px; font-weight: 850; word-break: break-word; }
+
+    /* Stats */
+    .grid{ display:grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .stat{ border: 1px solid var(--border); background: var(--panel2); border-radius: var(--radius2); padding: 12px 12px; min-height: 86px; display:flex; flex-direction: column; justify-content: space-between; }
+    .stat .k{ font-size: 26px; font-weight: 950; line-height: 1; letter-spacing: .2px; }
+    .stat .l{ font-size: 12px; color: var(--muted); font-weight: 900; letter-spacing: .2px; font-family: var(--mono); text-transform: uppercase; }
+
+    /* Log */
+    .table-wrap{ overflow:auto; border: 1px solid var(--border); border-radius: 16px; background: var(--panel2); }
+    table{ width: 100%; border-collapse: collapse; min-width: 980px; }
+    thead th{ position: sticky; top: 0; z-index: 1; background: var(--theadBg); text-align: left; font-size: 11px; letter-spacing: .35px; text-transform: uppercase; padding: 10px 12px; border-bottom: 1px solid var(--border); font-family: var(--mono); }
+    tbody td{ padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: 13px; vertical-align: top; }
+    tbody tr:hover td{ background: var(--hoverRow); }
+    .empty{ padding: 20px 12px; color: var(--muted); font-size: 13px; text-align: center; }
+
+    /* Dialog */
+    dialog{
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: color-mix(in srgb, var(--bg) 72%, transparent);
+      color: var(--text);
+      box-shadow: var(--shadow);
+      width: min(860px, calc(100vw - 26px));
+      padding: 0;
+      overflow: hidden;
+    }
+    dialog::backdrop{ background: rgba(0,0,0,.62); backdrop-filter: blur(4px); }
+    .dlg-hd{ padding: 14px 16px; border-bottom: 1px solid var(--border); display:flex; justify-content: space-between; align-items:center; gap: 10px; }
+    .dlg-hd h3{ margin: 0; font-size: 14px; font-weight: 920; letter-spacing: .2px; }
+    .dlg-bd{ padding: 14px 16px 16px; }
+    .dlg-grid{ display:grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    @media (max-width: 720px){ .dlg-grid{ grid-template-columns: 1fr; } }
+    .dlg-ft{ padding: 14px 16px; border-top: 1px solid var(--border); display:flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+    .muted{ color: var(--muted); font-size: 12px; line-height: 1.35; }
+    .kbd{ font-family: var(--mono); border:1px solid var(--border); background: var(--panel2); padding: 3px 6px; border-radius: 10px; font-size: 12px; }
+
+    /* Toast */
+    .toast{ position: fixed; right: 16px; bottom: 16px; z-index: 60; display:flex; flex-direction: column; gap: 10px; pointer-events: none; }
+    .t{ pointer-events: auto; border: 1px solid var(--border); background: color-mix(in srgb, var(--bg) 76%, var(--panel)); color: var(--text); border-radius: 16px; padding: 10px 12px; min-width: 280px; box-shadow: 0 16px 40px rgba(0,0,0,.35); display:flex; align-items:flex-start; gap: 10px; animation: pop .18s ease-out; }
+    @keyframes pop{ from{ transform: translateY(6px); opacity: 0; } to{ transform: translateY(0); opacity: 1; } }
+    .t .ic{ width: 18px; height: 18px; margin-top: 2px; font-weight: 900; font-family: var(--mono); }
+    .t .txt{ font-size: 13px; line-height: 1.35; }
+    .t .x{ margin-left:auto; background: transparent; border: none; color: var(--muted); cursor: pointer; padding: 2px 6px; font-size: 16px; line-height: 1; }
+    .t .x:hover{ color: var(--text); }
+
+    /* Inverse badge for "Не проверено" without breaking monochrome */
+    .tag.bad{
+      background: var(--text);
+      color: var(--bg);
+      border-color: var(--text);
+      opacity: .92;
+    }
+    .tag.bad::before{ background: var(--bg); opacity: .95; }
+}
+
+    .card.compact .c-link,
+    .card.compact .c-last{
+      font-size: 12px;
+      color: var(--muted);
+      font-family: var(--mono);
+      white-space: nowrap;
+    }
+    .card.compact .c-link{ text-decoration: none; border-bottom: 1px dotted color-mix(in srgb, var(--muted) 45%, transparent); }
+    .card.compact .c-link:hover{ color: var(--text); border-bottom-color: color-mix(in srgb, var(--text) 55%, transparent); }
+
+    .card.compact .c-right{
+      display:flex;
+      align-items:center;
+      gap: 10px;
+      flex: 0 0 auto;
+    }
+    .card.compact .tag{
+      padding: 6px 10px;
+      font-size: 11px;
+    }
+    .btn.tiny{
+      padding: 7px 10px;
+      font-size: 12px;
+      font-weight: 900;
+    }
+    .btn.tiny.primary{
+      border-color: var(--border2);
+      background: color-mix(in srgb, var(--btnBgHover) 70%, transparent);
+    }
+    .btn.tiny.good{
+      border-color: var(--border2);
+    }
+    .card.compact .c-actions{
+      display:flex;
+      align-items:center;
+      gap: 8px;
+      flex-wrap: nowrap;
+    }
+    @media (max-width: 720px){
+      .card.compact .c-line{ flex-wrap: wrap; justify-content: flex-start; }
+      .card.compact .c-right{ width: 100%; justify-content: space-between; }
+      .card.compact .c-actions{ flex-wrap: wrap; }
+    }
+
+
+    /* Stronger "not checked" without side stripe */
+    .card.bad{
+      border-color: color-mix(in srgb, var(--text) 55%, transparent);
+      background: color-mix(in srgb, var(--text) 6%, var(--panel));
+    }
+    html[data-theme="paper"] .card.bad{
+      border-color: color-mix(in srgb, var(--text) 45%, transparent);
+      background: color-mix(in srgb, var(--text) 6%, var(--panel));
+    }
+
+    /* Journal number pill */
+    .numPill{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--panel2);
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: .2px;
+      white-space: nowrap;
+      flex: 0 0 auto;
+    }
+
+    /* Compact: two-line left column (name on top, source+last below) */
+    .card.compact{
+      padding: 10px 12px; /* no stripe */
+      gap: 10px;
+      align-items: center;
+    }
+    .card.compact .c-left{
+      display:flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 0;
+      flex: 1 1 auto;
+    }
+    .card.compact .c-top{
+      display:flex;
+      align-items:center;
+      gap: 10px;
+      min-width: 0;
+    }
+    .card.compact .name{
+      margin:0;
+      font-size: 13px;
+      font-weight: 920;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 560px;
+    }
+    @media (max-width: 980px){ .card.compact .name{ max-width: 420px; } }
+    @media (max-width: 720px){ .card.compact .name{ max-width: 280px; } }
+
+    .card.compact .c-bottom{
+      display:flex;
+      align-items:center;
+      gap: 10px;
+      min-width: 0;
+      flex-wrap: wrap;
+    }
+
+    .card.compact .c-link,
+    .card.compact .c-last{
+      font-size: 12px;
+      color: var(--muted);
+      font-family: var(--mono);
+      white-space: nowrap;
+    }
+
+    /* make "Источник" feel like a tiny button */
+    .card.compact .c-link{
+      display:inline-flex;
+      align-items:center;
+      gap: 8px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--panel2);
+      text-decoration: none;
+      line-height: 1;
+    }
+    .card.compact .c-link:hover{
+      color: var(--text);
+      border-color: var(--border2);
+      background: var(--panel);
+      text-decoration: none;
+    }
+
+</style>
+</head>
+
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <h1>Литобзор · Мониторинг источников</h1>
+          <div class="sub" id="weekLabel">Неделя: —</div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <div class="chip" id="backupStatus" title="Состояние автобэкапа в файл">
+          <span class="dot warn" id="backupDot"></span>
+          <span id="backupText">Бэкап: не подключён</span>
+        </div>
+
+        <button class="btn good" id="btnConnectBackup" title="Выбрать файл, куда будет автоматически сохраняться JSON-бэкап">
+          Подключить бэкап
+        </button>
+
+        <div class="menu" id="exportMenu">
+          <button class="btn primary" id="btnExportMenu" aria-haspopup="true" aria-expanded="false" title="Экспорт и выгрузки">
+            Экспорт <span style="opacity:.75;">▾</span>
+          </button>
+          <div class="menuList" role="menu" aria-label="Экспорт">
+            <button class="menuItem" id="miExportAll" role="menuitem">
+              <span>Экспорт: всё</span><span class="hint">xlsx/csv</span>
+            </button>
+            <button class="menuItem" id="miExportWeek" role="menuitem">
+              <span>Экспорт: неделя</span><span class="hint">xlsx/csv</span>
+            </button>
+            <div class="menuSep"></div>
+            <button class="menuItem" id="miDownloadJson" role="menuitem">
+              <span>Скачать базу</span><span class="hint">json</span>
+            </button>
+          </div>
+        </div>
+
+        <button class="btn danger" id="btnWipe" title="Удалить все локальные данные">Очистить</button>
+
+        <span class="spacer"></span>
+
+        <div class="menu" id="themeMenu">
+          <button class="btn icon" id="btnTheme" aria-haspopup="true" aria-expanded="false" title="Смена темы">
+            <span id="themeText">Noir</span> <span style="opacity:.75;">▾</span>
+          </button>
+          <div class="menuList" role="menu" aria-label="Тема">
+            <button class="menuItem" data-theme="noir" role="menuitem">
+              <span>Noir</span><span class="hint">тёмная</span>
+            </button>
+            <button class="menuItem" data-theme="paper" role="menuitem">
+              <span>Paper</span><span class="hint">светлая</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="toggleRow" title="Плотность интерфейса (сохраняется локально)">
+          <span class="txt">Компакт</span>
+          <label class="toggle" aria-label="Компактный режим">
+            <input type="checkbox" id="compactToggle" />
+            <span class="switch"><span class="knob"></span></span>
+          </label>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="app">
+    <div class="shell">
+      <section class="panel">
+        <div class="panel-hd">
+          <div class="tabs" role="tablist" aria-label="Разделы">
+            <button class="tab active" id="tabSources" role="tab" aria-selected="true">Источники</button>
+            <button class="tab" id="tabLog" role="tab" aria-selected="false">Журнал</button>
+          </div>
+          <div class="pill" title="Подсчёт по последним 7 дням">7 дней</div>
+        </div>
+
+        <div class="panel-bd">
+          <div class="controls" aria-label="Фильтры">
+            <div class="field">
+              <label>Дата проверки</label>
+              <input class="input" type="date" id="checkDate" />
+            </div>
+            <div class="field">
+              <label>Фильтр</label>
+              <select id="filterSelect">
+                <option value="all">Все</option>
+                <option value="checked">Проверено (7 дней)</option>
+                <option value="unchecked">Не проверено (7 дней)</option>
+                <option value="newIssue">Новый выпуск (7 дней)</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Поиск по названию</label>
+              <input class="input" id="searchInput" placeholder="Напр.: кардио, дерма, pediatr..." />
+            </div>
+          </div>
+
+          <div id="viewSources" class="list" aria-live="polite"></div>
+
+          <div id="viewLog" class="hidden" style="margin-top: 12px;">
+            <div class="muted" style="margin: 8px 2px 10px;">
+              Журнал — таблица (одна строка = одна проверка). Это тот же формат, что уходит в Excel/CSV.
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Дата</th>
+                    <th>Время</th>
+                    <th>Источник</th>
+                    <th>Статус</th>
+                    <th>Выпуск</th>
+                    <th>НЯ?</th>
+                    <th>Статья</th>
+                    <th>Препарат</th>
+                    <th>Результат</th>
+                    <th>PV-Hub</th>
+                    <th>Ответственный</th>
+                  </tr>
+                </thead>
+                <tbody id="logBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <aside class="panel">
+        <div class="panel-hd">
+          <div>
+            <p class="title">Сводка</p>
+            <p class="hint">Счётчики считаются по последним 7 дням.</p>
+          </div>
+          <span class="pill" id="pillWeek">—</span>
+        </div>
+
+        <div class="panel-bd">
+          <div class="grid">
+            <div class="stat">
+              <div class="k" id="stTotal">0</div>
+              <div class="l">Всего источников</div>
+            </div>
+            <div class="stat">
+              <div class="k" id="stChecked">0</div>
+              <div class="l">Проверено</div>
+            </div>
+            <div class="stat">
+              <div class="k" id="stNew">0</div>
+              <div class="l">Новых выпусков</div>
+            </div>
+            <div class="stat">
+              <div class="k" id="stUnchecked">0</div>
+              <div class="l">Не проверено</div>
+            </div>
+          </div>
+
+          <div style="margin-top: 12px;">
+            <div class="pill">Данные: браузер (localStorage) + JSON-бэкап в файл (если подключён)</div>
+          </div>
+
+          <div style="margin-top: 12px;" class="muted">
+            Подсказка: быстрые действия на карточке — “Проверено”, “Новый выпуск”, “+ Запись”.
+          </div>
+
+          <div style="margin-top: 12px;" class="muted">
+            Горячие клавиши: <span class="kbd">Esc</span> закрыть меню/диалог.
+          </div>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <!-- Add check dialog -->
+  <dialog id="checkDlg" aria-label="Добавить проверку">
+    <div class="dlg-hd">
+      <h3 id="dlgTitle">Проверка</h3>
+      <button class="btn small ghost" id="dlgClose" aria-label="Закрыть">✕</button>
+    </div>
+    <div class="dlg-bd">
+      <div class="muted" id="dlgSourceLine" style="margin-bottom: 10px;"></div>
+
+      <div class="dlg-grid">
+        <div class="field">
+          <label>Статус</label>
+          <select id="fStatus">
+            <option value="Проверено">Проверено</option>
+            <option value="Новый выпуск">Новый выпуск</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Номер выпуска</label>
+          <input class="input" id="fIssue" placeholder="Напр.: №3 (2026) / 1(25) / Том 5 №2" />
+        </div>
+
+        <div class="field">
+          <label>НЯ по препарату</label>
+          <select id="fNY">
+            <option value="Нет">Нет</option>
+            <option value="Да">Да</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Автор и название статьи</label>
+          <input class="input" id="fArticle" placeholder="Если нужно" />
+        </div>
+
+        <div class="field">
+          <label>Препарат</label>
+          <input class="input" id="fDrug" placeholder="Если нужно" />
+        </div>
+
+        <div class="field">
+          <label>Результат</label>
+          <input class="input" id="fResult" placeholder="Напр.: не выявлены / НЯ выявлены / ..." />
+        </div>
+
+        <div class="field">
+          <label>Дата PV-Hub</label>
+          <input class="input" id="fPV" placeholder="Если применимо" />
+        </div>
+
+        <div class="field">
+          <label>Ответственный</label>
+          <input class="input" id="fResp" placeholder="ФИО" />
+        </div>
+
+        <div class="field" style="grid-column: 1 / -1;">
+          <label>Комментарий</label>
+          <textarea class="input" id="fNote" placeholder="Коротко: что важно запомнить по проверке"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="dlg-ft">
+      <button class="btn ghost" id="dlgCancel">Отмена</button>
+      <button class="btn primary" id="dlgSave">Сохранить</button>
+    </div>
+  </dialog>
+
+  <div class="toast" id="toast" aria-live="polite" aria-atomic="true"></div>
+
+  <script>
+    "use strict";
+
+    // ============================================================
+    //  Litreview Monitor · Futurist Minimal v4 (monochrome)
+    //  Single-file app. Data: localStorage + optional JSON autobackup.
+    // ============================================================
+
+    const STORAGE_KEY = "litreview_monitor_futurist_v4";
+    const THEME_KEY   = "litreview_theme_futurist_v4";
+    const DENSITY_KEY = "litreview_density_futurist_v4";
+    const BACKUP_HANDLE_NAME_KEY = "litreview_backup_handle_name_v4";
+
+    const DEFAULT_SOURCES = [
+  {
+    "id": 1,
+    "name": "Medical Express",
+    "url": "http://www.medicalexpress.uz/"
+  },
+  {
+    "id": 2,
+    "name": "Веб-сайт uzpharm-control.uz",
+    "url": "https://www.uzpharm-control.uz/ru/news"
+  },
+  {
+    "id": 3,
+    "name": "Бюллетень ассоциации врачей Узбекистана",
+    "url": ""
+  },
+  {
+    "id": 4,
+    "name": "Вестник врача общей практики",
+    "url": "https://www.sammu.uz/ru/journals/4"
+  },
+  {
+    "id": 5,
+    "name": "Вестник Ташкентской Медицинской Академии",
+    "url": ""
+  },
+  {
+    "id": 6,
+    "name": "Вестник экстренной медицины",
+    "url": ""
+  },
+  {
+    "id": 7,
+    "name": "Дерматовенерология и эстетическая медицина",
+    "url": "https://dermatology.uz/ru/zhurnal-dermatovenerologiya-i-esteticheskaya-mediczina/"
+  },
+  {
+    "id": 8,
+    "name": "Евразийский вестник педиатрии",
+    "url": "https://tashpmi.uz/nauka/nauchnye-zhurnaly/"
+  },
+  {
+    "id": 9,
+    "name": "Евразийский журнал оториноларингологии",
+    "url": "http://journals.scinnovations.uz/index.php/ejohns/issue/archive"
+  },
+  {
+    "id": 10,
+    "name": "Журнал биомедицины и практики",
+    "url": "https://tadqiqot.uz/index.php/biomedicine/issue/archive"
+  },
+  {
+    "id": 11,
+    "name": "Журнал гепато-гастроэнтерологических исследований",
+    "url": "https://www.sammu.uz/ru/journals/6"
+  },
+  {
+    "id": 12,
+    "name": "Журнал кардиореспираторных исследований",
+    "url": "https://tadqiqot.uz/index.php/cardio/issue/archive"
+  },
+  {
+    "id": 13,
+    "name": "Журнал неврологии и нейрохирургических исследований",
+    "url": "https://tadqiqot.uz/index.php/neurology/issue/archive"
+  },
+  {
+    "id": 14,
+    "name": "Журнал репродуктивного здоровья и уро-нефрологических исследований",
+    "url": "https://tadqiqot.uz/index.php/uro/issue/archive"
+  },
+  {
+    "id": 15,
+    "name": "Журнал современной медицины",
+    "url": "https://nashruz.uz/ru/journal-open/?id=1"
+  },
+  {
+    "id": 16,
+    "name": "Интегративная стоматология и челюстно-лицевая хирургия",
+    "url": "https://journals.scinnovations.uz/index.php/idmfs/issue/archive"
+  },
+  {
+    "id": 17,
+    "name": "Инфекция, иммунитет и фармакология",
+    "url": "https://infection-immunity.uz/vypuski-zhurnalov"
+  },
+  {
+    "id": 18,
+    "name": "Кардиология Узбекистана",
+    "url": "https://cardiojournal.uz/index.php/journal"
+  },
+  {
+    "id": 19,
+    "name": "Новости дерматовенерологии и репродуктивного здоровья",
+    "url": "https://www.ndrz.uz/"
+  },
+  {
+    "id": 20,
+    "name": "Педиатрия",
+    "url": "https://tashpmi.uz/nauka/nauchnye-zhurnaly/zhurnal-pediatriya/"
+  },
+  {
+    "id": 21,
+    "name": "Передовая офтальмология",
+    "url": "https://journals.scinnovations.uz/index.php/ao/issue/archive"
+  },
+  {
+    "id": 22,
+    "name": "Проблемы биологии и медицины",
+    "url": "https://www.sammu.uz/ru/journals/2"
+  },
+  {
+    "id": 23,
+    "name": "Травматология, ортопедия и реабилитация",
+    "url": "https://www.uzniito.uz/journal"
+  },
+  {
+    "id": 24,
+    "name": "Узбекский медицинский журнал",
+    "url": "https://www.tadqiqot.uz/index.php/medical/issue/archive"
+  },
+  {
+    "id": 25,
+    "name": "Универсальный международный научный журнал",
+    "url": "https://universaljournal.uz/index.php/jurnal/index"
+  }
+];
+
+    // In-memory state
+    let sources = DEFAULT_SOURCES.slice();          // readonly list (journals)
+    let sourcesById = new Map();
+    let checks = [];                                // log rows
+
+    // Dialog state
+    let currentDialogSourceId = null;
+
+    // Autobackup (File System Access API handle; user selects each session)
+    let backupFileHandle = null;
+    let backupWriteQueued = false;
+    let backupWriteLastAt = 0;
+
+    // ------------------------------------------------------------
+    // DOM helpers
+    // ------------------------------------------------------------
+    const $ = (sel) => document.querySelector(sel);
+
+    function escapeHtml(str){
+      return (str ?? "").toString()
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    // ------------------------------------------------------------
+    // Time / date
+    // ------------------------------------------------------------
+    function pad2(n){ return String(n).padStart(2, "0"); }
+    function isoToday(){
+      const d = new Date();
+      return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+    }
+    function nowTimeRU(){
+      const d = new Date();
+      return d.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+    }
+    function formatDateRU(iso){
+      if(!iso) return "—";
+      const d = new Date(iso);
+      return `${pad2(d.getDate())}.${pad2(d.getMonth()+1)}.${d.getFullYear()}`;
+    }
+    function weekWindowDays(){
+      const end = new Date();
+      end.setHours(0,0,0,0);
+      const start = new Date(end);
+      start.setDate(start.getDate() - 6);
+      return { start, end };
+    }
+    function isInLast7Days(isoDate){
+      const { start, end } = weekWindowDays();
+      const d = new Date(isoDate);
+      d.setHours(0,0,0,0);
+      return d >= start && d <= end;
+    }
+    function calcWeekLabel(){
+      const { start, end } = weekWindowDays();
+      const s = `${pad2(start.getDate())}.${pad2(start.getMonth()+1)}.${start.getFullYear()}`;
+      const e = `${pad2(end.getDate())}.${pad2(end.getMonth()+1)}.${end.getFullYear()}`;
+      return `${s} — ${e}`;
+    }
+
+    // ------------------------------------------------------------
+    // Toasts
+    // ------------------------------------------------------------
+    function toast(message, type="info"){
+      const host = $("#toast");
+      const el = document.createElement("div");
+      el.className = "t";
+      const icon = type==="ok" ? "✓" : type==="warn" ? "!" : type==="bad" ? "×" : "•";
+      el.innerHTML = `
+        <div class="ic">${icon}</div>
+        <div class="txt">${escapeHtml(message)}</div>
+        <button class="x" aria-label="Закрыть">✕</button>
+      `;
+      el.querySelector(".x").addEventListener("click", () => el.remove());
+      host.appendChild(el);
+      setTimeout(() => {
+        if (el.isConnected) el.remove();
+      }, 5400);
+    }
+
+    // ------------------------------------------------------------
+    // Theme / density
+    // ------------------------------------------------------------
+    function applyTheme(theme){
+      const allowed = new Set(["noir","paper"]);
+      const t = allowed.has(theme) ? theme : "noir";
+      document.documentElement.setAttribute("data-theme", t);
+      $("#themeText").textContent = t === "paper" ? "Paper" : "Noir";
+      try{ localStorage.setItem(THEME_KEY, t); }catch(e){}
+    }
+    function loadTheme(){
+      try{
+        const t = localStorage.getItem(THEME_KEY);
+        if (t) return t;
+      }catch(e){}
+      // prefer system when no preference stored
+      try {
+        if (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches) return "paper";
+      } catch(e) {}
+      return "noir";
+    }
+
+    function applyDensity(density){
+      const allowed = new Set(["comfortable","compact"]);
+      const d = allowed.has(density) ? density : "comfortable";
+      document.documentElement.setAttribute("data-density", d);
+      $("#compactToggle").checked = (d === "compact");
+      try{ localStorage.setItem(DENSITY_KEY, d); }catch(e){}
+      renderSources();
+    }
+    function loadDensity(){
+      try{
+        const d = localStorage.getItem(DENSITY_KEY);
+        if (d) return d;
+      }catch(e){}
+      return "comfortable";
+    }
+    function isCompact(){
+      return document.documentElement.getAttribute("data-density") === "compact";
+    }
+
+    // ------------------------------------------------------------
+    // Menus
+    // ------------------------------------------------------------
+    function setupMenu(menuId, buttonId){
+      const menu = document.getElementById(menuId);
+      const btn = document.getElementById(buttonId);
+      if (!menu || !btn) return;
+
+      function open(){ menu.classList.add("open"); btn.setAttribute("aria-expanded","true"); }
+      function close(){ menu.classList.remove("open"); btn.setAttribute("aria-expanded","false"); }
+
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (menu.classList.contains("open")) close(); else open();
+      });
+      menu.addEventListener("click", (e) => e.stopPropagation());
+      document.addEventListener("click", () => close());
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") close();
+      });
+
+      return { open, close, menu, btn };
+    }
+
+    // ------------------------------------------------------------
+    // Storage (robust migration)
+    // ------------------------------------------------------------
+    function buildBackupObject(){
+      return {
+        version: 4,
+        exportedAt: new Date().toISOString(),
+        sources,
+        checks
+      };
+    }
+
+    function load(){
+      // 1) main v4 key
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && Array.isArray(parsed.checks)) {
+            checks = parsed.checks;
+            return;
+          }
+        }
+      } catch(e) {}
+
+      // 2) scan all keys: find any object with .checks array (pick the biggest)
+      try {
+        let best = null;
+        for (let i=0; i<localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (!k) continue;
+          const raw = localStorage.getItem(k);
+          if (!raw) continue;
+          try {
+            const parsed = JSON.parse(raw);
+            if (parsed && Array.isArray(parsed.checks)) {
+              const arr = parsed.checks;
+              if (!best || (arr.length > best.checks.length)) best = parsed;
+            }
+          } catch(_) {}
+        }
+        if (best && Array.isArray(best.checks)) {
+          checks = best.checks;
+          save(false);
+          toast("Данные импортированы из найденного сохранения ✓", "ok");
+          return;
+        }
+      } catch(e) {}
+
+      // 3) legacy "literatureMonitoring" (map: sourceId -> array)
+      try {
+        const old = localStorage.getItem("literatureMonitoring");
+        if (old) {
+          const parsed = JSON.parse(old);
+          if (parsed && typeof parsed === "object") {
+            const migrated = [];
+            Object.keys(parsed).forEach(key => {
+              const sourceId = Number(key);
+              const arr = Array.isArray(parsed[key]) ? parsed[key] : [];
+              arr.forEach(item => {
+                migrated.push({
+                  id: cryptoRandomId(),
+                  sourceId,
+                  date: item.date || isoToday(),
+                  time: item.time || nowTimeRU(),
+                  status: item.status || "Проверено",
+                  issueNumber: item.issueNumber || "",
+                  nyDetected: (item.articleInfo && item.articleInfo !== "-") ? "Да" : "Нет",
+                  articleInfo: item.articleInfo && item.articleInfo !== "-" ? item.articleInfo : "",
+                  drugName: item.drugName && item.drugName !== "-" ? item.drugName : "",
+                  result: item.result && item.result !== "-" ? item.result : "",
+                  pvHubDate: item.pvHubDate && item.pvHubDate !== "-" ? item.pvHubDate : "",
+                  responsible: item.responsible && item.responsible !== "-" ? item.responsible : "",
+                  note: item.note && item.note !== "-" ? item.note : "",
+                  createdAt: item.timestamp || Date.now()
+                });
+              });
+            });
+            checks = migrated;
+            save(false);
+            toast("Данные перенесены из старого формата ✓", "ok");
+            return;
+          }
+        }
+      } catch(e) {}
+
+      checks = [];
+    }
+
+    function save(triggerBackup=true){
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 4, checks }));
+      } catch(e) {
+        console.error(e);
+        toast("Не удалось сохранить данные в браузере (localStorage).", "bad");
+      }
+      if (triggerBackup) scheduleBackupWrite();
+    }
+
+    // ------------------------------------------------------------
+    // Data helpers
+    // ------------------------------------------------------------
+    function rebuildMaps(){
+      sourcesById = new Map(sources.map(s => [s.id, s]));
+    }
+    function checksForSource(sourceId){ return checks.filter(c => c.sourceId === sourceId); }
+    function stableSortChecks(arr){
+      // stable sort by createdAt, fallback date+time
+      return arr.slice().sort((a,b) => {
+        const aa = (a.createdAt ?? 0);
+        const bb = (b.createdAt ?? 0);
+        if (aa !== bb) return aa - bb;
+        const ad = (a.date ?? "") + (a.time ?? "");
+        const bd = (b.date ?? "") + (b.time ?? "");
+        return ad.localeCompare(bd, "ru");
+      });
+    }
+    function lastCheck(sourceId){
+      const arr = checksForSource(sourceId);
+      if (!arr.length) return null;
+      const sorted = stableSortChecks(arr);
+      return sorted[sorted.length - 1];
+    }
+    function weekChecks(sourceId){
+      return checksForSource(sourceId).filter(c => isInLast7Days(c.date));
+    }
+    function sourceCardStatus(sourceId){
+      const w = weekChecks(sourceId);
+      if (w.length === 0) return "bad";
+      if (w.some(x => x.status === "Новый выпуск")) return "warn";
+      return "ok";
+    }
+
+    // ------------------------------------------------------------
+    // Render
+    // ------------------------------------------------------------
+    function renderStats(){
+      const total = sources.length;
+      let checkedCount = 0, newIssues = 0, uncheckedCount = 0;
+
+      for (const s of sources){
+        const w = weekChecks(s.id);
+        if (w.length > 0) checkedCount++;
+        if (w.some(x => x.status === "Новый выпуск")) newIssues++;
+        if (w.length === 0) uncheckedCount++;
+      }
+
+      $("#stTotal").textContent = total;
+      $("#stChecked").textContent = checkedCount;
+      $("#stNew").textContent = newIssues;
+      $("#stUnchecked").textContent = uncheckedCount;
+
+      const label = calcWeekLabel();
+      $("#weekLabel").textContent = "Неделя: " + label;
+      $("#pillWeek").textContent = label;
+    }
+
+    function renderHistoryItems(sourceId){
+      const arr = checksForSource(sourceId).slice().sort((a,b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
+      return arr.map(c => {
+        const tag = c.status === "Новый выпуск" ? "warn" : "ok";
+        const ny = (c.nyDetected || "").toLowerCase() === "да" ? "Да" : "Нет";
+        return `
+          <div class="hist-item">
+            <div class="hist-top">
+              <div style="font-weight: 920;">${escapeHtml(formatDateRU(c.date))} · ${escapeHtml(c.time || "—")}</div>
+              <span class="tag ${tag}">${c.status === "Новый выпуск" ? "Новый выпуск" : "Проверено"}</span>
+            </div>
+            <div class="hist-grid">
+              <div class="kv"><div class="k">Номер выпуска</div><div class="v">${escapeHtml(c.issueNumber || "—")}</div></div>
+              <div class="kv"><div class="k">НЯ</div><div class="v">${escapeHtml(ny || "—")}</div></div>
+              <div class="kv"><div class="k">Статья</div><div class="v">${escapeHtml(c.articleInfo || "—")}</div></div>
+              <div class="kv"><div class="k">Препарат</div><div class="v">${escapeHtml(c.drugName || "—")}</div></div>
+              <div class="kv"><div class="k">Результат</div><div class="v">${escapeHtml(c.result || "—")}</div></div>
+              <div class="kv"><div class="k">PV-Hub</div><div class="v">${escapeHtml(c.pvHubDate || "—")}</div></div>
+              <div class="kv"><div class="k">Ответственный</div><div class="v">${escapeHtml(c.responsible || "—")}</div></div>
+              <div class="kv"><div class="k">Комментарий</div><div class="v">${escapeHtml(c.note || "—")}</div></div>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function renderSources(){
+      const host = $("#viewSources");
+      host.innerHTML = "";
+
+      const filter = $("#filterSelect").value;
+      const query = ($("#searchInput").value || "").trim().toLowerCase();
+      const compact = isCompact();
+
+      const list = sources.filter(s => {
+        if (query && !s.name.toLowerCase().includes(query)) return false;
+        const w = weekChecks(s.id);
+
+        if (filter === "all") return true;
+        if (filter === "checked") return w.length > 0;
+        if (filter === "unchecked") return w.length === 0;
+        if (filter === "newIssue") return w.some(x => x.status === "Новый выпуск");
+        return true;
+      });
+
+      if (!list.length){
+        const empty = document.createElement("div");
+        empty.className = "empty";
+        empty.textContent = "Ничего не найдено. Попробуй другой фильтр или запрос.";
+        host.appendChild(empty);
+        return;
+      }
+
+      const frag = document.createDocumentFragment();
+
+      for (const s of list){
+        const st = sourceCardStatus(s.id);
+        const last = lastCheck(s.id);
+        const week = weekChecks(s.id);
+        const total = checksForSource(s.id).length;
+
+        const card = document.createElement("div");
+        card.className = `card ${st}`;
+        card.setAttribute("data-source", String(s.id));
+
+        const statusTag = st === "ok" ? `<span class="tag ok">Проверено</span>`
+                        : st === "warn" ? `<span class="tag warn">Новый выпуск</span>`
+                        : `<span class="tag bad">Не проверено</span>`;
+
+        const lastLine = last ? `${formatDateRU(last.date)} · ${last.time || "—"}` : "—";
+        const lastStatus = last
+          ? (last.status === "Новый выпуск" ? `<span class="tag warn">Новый выпуск</span>` : `<span class="tag ok">Проверено</span>`)
+          : `<span class="tag bad">Нет записей</span>`;
+        const issuePart = last && last.issueNumber ? last.issueNumber : "—";
+
+        
+        if (compact) {
+          // Compact: two-line left (title on top, source below), right stays tight.
+          const statusTagCompact = st === "ok" ? `<span class="tag ok">Проверено</span>`
+                                : st === "warn" ? `<span class="tag warn">Новый выпуск</span>`
+                                : `<span class="tag bad">Не проверено</span>`;
+
+          const sourceLink = s.url
+            ? `<a class="c-link" href="${escapeHtml(s.url)}" target="_blank" rel="noreferrer">Источник</a>`
+            : `<span class="c-link" style="opacity:.65; pointer-events:none;">Источник: —</span>`;
+
+          const lastCompact = last ? `${formatDateRU(last.date)} · ${escapeHtml(last.time || "—")}` : "—";
+
+          card.classList.add("compact");
+          card.innerHTML = `
+            <div class="c-line">
+              <div class="c-left">
+                <div class="c-top">
+                  <span class="numPill">№${s.id}</span>
+                  <p class="name">${escapeHtml(s.name)}</p>
+                </div>
+                <div class="c-bottom">
+                  ${sourceLink}
+                  <span class="c-last">Последняя: ${escapeHtml(lastCompact)}</span>
+                </div>
+              </div>
+
+              <div class="c-right">
+                ${statusTagCompact}
+                <div class="c-actions">
+                  <button class="btn tiny good" data-action="quick-ok" data-source="${s.id}">Проверено</button>
+                  <button class="btn tiny primary" data-action="open-dlg" data-source="${s.id}" data-mode="new">Новый выпуск</button>
+                </div>
+              </div>
+            </div>
+          `;
+        } else {
+          card.innerHTML = `
+            <div class="card-main">
+              <div class="row">
+                <p class="name">№${s.id}. ${escapeHtml(s.name)}</p>
+                ${statusTag}
+              </div>
+
+              <div class="meta">
+                ${s.url ? `<a href="${escapeHtml(s.url)}" target="_blank" rel="noreferrer">Открыть источник</a>` : `<span class="muted">URL не указан</span>`}
+                <span class="pill">Записей: ${total}</span>
+              </div>
+
+              <div class="mini">
+                <div class="box">
+                  <div class="lab">Последняя проверка</div>
+                  <div class="val">${escapeHtml(lastLine)}</div>
+                </div>
+                <div class="box">
+                  <div class="lab">Статус (последний)</div>
+                  <div class="val">${lastStatus}</div>
+                </div>
+                <div class="box">
+                  <div class="lab">Выпуск (последний)</div>
+                  <div class="val">${escapeHtml(issuePart)}</div>
+                </div>
+                <div class="box">
+                  <div class="lab">Проверок за 7 дней</div>
+                  <div class="val">${week.length}</div>
+                </div>
+              </div>
+
+              ${total ? `
+                <div class="history">
+                  <details>
+                    <summary>История (${total})</summary>
+                    <div class="hist-list">
+                      ${renderHistoryItems(s.id)}
+                    </div>
+                  </details>
+                </div>` : ""
+              }
+            </div>
+
+            <div class="card-actions">
+              <button class="btn small" data-action="quick-ok" data-source="${s.id}">Проверено</button>
+              <button class="btn small" data-action="open-dlg" data-source="${s.id}" data-mode="new">Новый выпуск</button>
+              <button class="btn small ghost" data-action="open-dlg" data-source="${s.id}" data-mode="edit">+ Запись</button>
+            </div>
+          `;
+        }
+
+        frag.appendChild(card);
+
+      }
+
+      host.appendChild(frag);
+    }
+
+    function renderLog(){
+      const tbody = $("#logBody");
+      tbody.innerHTML = "";
+
+      const filter = $("#filterSelect").value;
+      const query = ($("#searchInput").value || "").trim().toLowerCase();
+
+      const rows = stableSortChecks(checks).filter(c => {
+        const s = sourcesById.get(c.sourceId);
+        if (!s) return false;
+        if (query && !s.name.toLowerCase().includes(query)) return false;
+
+        const w = isInLast7Days(c.date);
+        if (filter === "checked") return w;
+        if (filter === "unchecked") return false;
+        if (filter === "newIssue") return w && c.status === "Новый выпуск";
+        return true;
+      });
+
+      if (!rows.length){
+        const tr = document.createElement("tr");
+        const td = document.createElement("td");
+        td.colSpan = 11;
+        td.className = "empty";
+        td.textContent = "Пока нет записей (или фильтр отсекает всё).";
+        tr.appendChild(td);
+        tbody.appendChild(tr);
+        return;
+      }
+
+      const frag = document.createDocumentFragment();
+      for (const c of rows){
+        const s = sourcesById.get(c.sourceId);
+        const ny = (c.nyDetected || "").toLowerCase() === "да" ? "Да" : "Нет";
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${escapeHtml(formatDateRU(c.date))}</td>
+          <td>${escapeHtml(c.time || "—")}</td>
+          <td>${escapeHtml(s ? s.name : "—")}</td>
+          <td>${escapeHtml(c.status || "—")}</td>
+          <td>${escapeHtml(c.issueNumber || "—")}</td>
+          <td>${escapeHtml(ny || "—")}</td>
+          <td>${escapeHtml(c.articleInfo || "—")}</td>
+          <td>${escapeHtml(c.drugName || "—")}</td>
+          <td>${escapeHtml(c.result || "—")}</td>
+          <td>${escapeHtml(c.pvHubDate || "—")}</td>
+          <td>${escapeHtml(c.responsible || "—")}</td>
+        `;
+        frag.appendChild(tr);
+      }
+      tbody.appendChild(frag);
+    }
+
+    function syncViews(){ renderStats(); renderSources(); renderLog(); }
+
+    // ------------------------------------------------------------
+    // Actions
+    // ------------------------------------------------------------
+    function cryptoRandomId(){
+      try {
+        // modern browsers
+        return crypto.randomUUID();
+      } catch(e) {
+        return "id_" + Math.random().toString(16).slice(2) + "_" + Date.now().toString(16);
+      }
+    }
+
+    function addCheckQuick(sourceId){
+      const date = $("#checkDate").value || isoToday();
+      const time = nowTimeRU();
+
+      checks.push({
+        id: cryptoRandomId(),
+        sourceId,
+        date,
+        time,
+        status: "Проверено",
+        issueNumber: "",
+        nyDetected: "Нет",
+        articleInfo: "",
+        drugName: "",
+        result: "не выявлены",
+        pvHubDate: "",
+        responsible: "",
+        note: "",
+        createdAt: Date.now()
+      });
+
+      save(true);
+      syncViews();
+      toast(`Отмечено: “Проверено” — №${sourceId}`, "ok");
+    }
+
+    function openDialog(sourceId, mode){
+      currentDialogSourceId = sourceId;
+      const src = sourcesById.get(sourceId);
+
+      $("#dlgTitle").textContent = mode === "new" ? "Новый выпуск" : "Добавить запись";
+      $("#dlgSourceLine").innerHTML = `<b>Источник:</b> №${sourceId}. ${escapeHtml(src?.name || "—")}`;
+
+      $("#fStatus").value = (mode === "new") ? "Новый выпуск" : "Проверено";
+      $("#fIssue").value = "";
+      $("#fNY").value = "Нет";
+      $("#fArticle").value = "";
+      $("#fDrug").value = "";
+      $("#fResult").value = (mode === "new") ? "" : "не выявлены";
+      $("#fPV").value = "";
+      $("#fResp").value = "";
+      $("#fNote").value = "";
+
+      applyDialogVisibility();
+
+      const dlg = $("#checkDlg");
+      if (typeof dlg.showModal === "function") dlg.showModal();
+      else dlg.setAttribute("open", "open");
+    }
+
+    function closeDialog(){
+      const dlg = $("#checkDlg");
+      if (typeof dlg.close === "function") dlg.close();
+      else dlg.removeAttribute("open");
+      currentDialogSourceId = null;
+    }
+
+    function applyDialogVisibility(){
+      const status = $("#fStatus").value;
+      const isNew = status === "Новый выпуск";
+      $("#fIssue").placeholder = isNew ? "Желательно: № выпуска…" : "Если нужно…";
+    }
+
+    function saveDialog(){
+      if (!currentDialogSourceId) return;
+
+      const date = $("#checkDate").value || isoToday();
+      const time = nowTimeRU();
+
+      const status = $("#fStatus").value;
+      const issueNumber = ($("#fIssue").value || "").trim();
+      const ny = $("#fNY").value;
+      const article = ($("#fArticle").value || "").trim();
+      const drug = ($("#fDrug").value || "").trim();
+      const resultRaw = ($("#fResult").value || "").trim();
+      const pv = ($("#fPV").value || "").trim();
+      const resp = ($("#fResp").value || "").trim();
+      const note = ($("#fNote").value || "").trim();
+
+      if (status === "Новый выпуск" && !issueNumber){
+        toast("Для “Новый выпуск” лучше указать номер выпуска (в отчётах потом легче).", "warn");
+      }
+
+      let result = resultRaw;
+      if (!result){
+        result = (status === "Проверено") ? "не выявлены" : (ny === "Да" ? "НЯ выявлены" : "не выявлены");
+      }
+
+      checks.push({
+        id: cryptoRandomId(),
+        sourceId: currentDialogSourceId,
+        date,
+        time,
+        status,
+        issueNumber,
+        nyDetected: ny,
+        articleInfo: article,
+        drugName: drug,
+        result,
+        pvHubDate: pv,
+        responsible: resp,
+        note,
+        createdAt: Date.now()
+      });
+
+      save(true);
+      closeDialog();
+      syncViews();
+      toast("Запись сохранена", "ok");
+    }
+
+    function wipe(){
+      const ok = confirm("Удалить все локальные данные по проверкам? Это действие нельзя отменить.");
+      if (!ok) return;
+      checks = [];
+      try{ localStorage.removeItem(STORAGE_KEY); }catch(e){}
+      save(true);
+      syncViews();
+      toast("Данные очищены.", "warn");
+    }
+
+    // ------------------------------------------------------------
+    // Backup (File System Access API)
+    // ------------------------------------------------------------
+    function supportsFSAccess(){
+      return typeof window.showSaveFilePicker === "function";
+    }
+
+    function setBackupUI(connected, filename=""){
+      const dot = $("#backupDot");
+      const text = $("#backupText");
+      if (connected){
+        dot.classList.remove("warn");
+        dot.classList.add("ok");
+        text.textContent = filename ? `Бэкап: ${filename}` : "Бэкап: подключён";
+      } else {
+        dot.classList.remove("ok");
+        dot.classList.add("warn");
+        text.textContent = supportsFSAccess() ? "Бэкап: не подключён" : "Бэкап: режим браузера";
+      }
+    }
+
+    async function connectBackupFile(){
+      if (!supportsFSAccess()){
+        toast("Этот браузер не поддерживает прямую запись в файл. Используй “Экспорт → Скачать базу (JSON)”.", "warn");
+        return;
+      }
+      try {
+        const handle = await window.showSaveFilePicker({
+          suggestedName: "litreview_backup.json",
+          types: [{
+            description: "JSON backup",
+            accept: { "application/json": [".json"] }
+          }]
+        });
+        backupFileHandle = handle;
+        try{ localStorage.setItem(BACKUP_HANDLE_NAME_KEY, handle.name || "litreview_backup.json"); }catch(e){}
+        setBackupUI(true, handle.name || "litreview_backup.json");
+        toast("Файл бэкапа подключён. Он будет обновляться при каждом изменении.", "ok");
+        await writeBackupToFile(true);
+      } catch(err) {
+        if (err && (err.name === "AbortError" || err.name === "NotAllowedError")) {
+          toast("Подключение бэкапа отменено.", "warn");
+          return;
+        }
+        console.error(err);
+        toast("Не удалось подключить файл бэкапа.", "bad");
+      }
+    }
+
+    // Debounced autosave: no more often than ~1 write / 700ms during bursts
+    function scheduleBackupWrite(){
+      if (!backupFileHandle) return;
+      const now = Date.now();
+      const minInterval = 700;
+      const since = now - backupWriteLastAt;
+
+      if (since >= minInterval && !backupWriteQueued){
+        writeBackupToFile(true);
+        return;
+      }
+      if (backupWriteQueued) return;
+
+      backupWriteQueued = true;
+      const delay = Math.max(120, minInterval - since);
+      setTimeout(async () => {
+        backupWriteQueued = false;
+        await writeBackupToFile(true);
+      }, delay);
+    }
+
+    async function writeBackupToFile(silent){
+      if (!backupFileHandle) return;
+      try {
+        const data = JSON.stringify(buildBackupObject(), null, 2);
+        const writable = await backupFileHandle.createWritable();
+        await writable.write(data);
+        await writable.close();
+        backupWriteLastAt = Date.now();
+        if (!silent) toast("Бэкап обновлён.", "ok");
+      } catch(err) {
+        console.error(err);
+        toast("Не удалось записать бэкап. Подключи файл заново.", "bad");
+        backupFileHandle = null;
+        setBackupUI(false);
+      }
+    }
+
+    function downloadBackupJSON(){
+      const data = JSON.stringify(buildBackupObject(), null, 2);
+      const blob = new Blob([data], { type: "application/json;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "litreview_backup.json";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast("JSON-бэкап скачан.", "ok");
+    }
+
+    // ------------------------------------------------------------
+    // Export (XLSX when available, otherwise CSV fallback)
+    // ------------------------------------------------------------
+    function hasXlsx(){ return !!window.XLSX && !!window.XLSX.utils; }
+
+    async function ensureXlsx(){
+      if (hasXlsx()) return true;
+
+      // If offline script missing, try loading from CDN (optional).
+      // If it fails, we will fallback to CSV.
+      const cdn = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
+      try {
+        await loadScript(cdn);
+        return hasXlsx();
+      } catch(e) {
+        return false;
+      }
+    }
+
+    function loadScript(src){
+      return new Promise((resolve, reject) => {
+        const s = document.createElement("script");
+        s.src = src;
+        s.async = true;
+        s.onload = () => resolve(true);
+        s.onerror = () => reject(new Error("script load failed"));
+        document.head.appendChild(s);
+      });
+    }
+
+    function downloadText(filename, text){
+      const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function toCsv(rows){
+      // rows: array of objects with same keys
+      const keys = rows.length ? Object.keys(rows[0]) : [];
+      const esc = (v) => {
+        const s = (v ?? "").toString();
+        const safe = s.replaceAll('"', '""');
+        return `"${safe}"`;
+      };
+      const head = keys.map(esc).join(",");
+      const body = rows.map(r => keys.map(k => esc(r[k])).join(",")).join("\n");
+      return head + "\n" + body;
+    }
+
+    async function exportAll(){
+      const okX = await ensureXlsx();
+      if (okX) return exportAllXlsx();
+      return exportAllCsv();
+    }
+
+    async function exportWeek(){
+      const okX = await ensureXlsx();
+      if (okX) return exportWeekXlsx();
+      return exportWeekCsv();
+    }
+
+    function exportAllXlsx(){
+      const wb = XLSX.utils.book_new();
+
+      const rows = stableSortChecks(checks).map(c => {
+        const s = sourcesById.get(c.sourceId);
+        return {
+          "ID источника": c.sourceId,
+          "Источник": s ? s.name : "",
+          "URL": s ? (s.url || "") : "",
+          "Дата": formatDateRU(c.date),
+          "Время": c.time || "",
+          "Статус": c.status || "",
+          "Номер выпуска": c.issueNumber || "",
+          "НЯ": c.nyDetected || "",
+          "Автор и название статьи": c.articleInfo || "",
+          "Препарат": c.drugName || "",
+          "Результат": c.result || "",
+          "Дата PV-Hub": c.pvHubDate || "",
+          "Ответственный": c.responsible || "",
+          "Комментарий": c.note || "",
+          "Создано (timestamp)": c.createdAt || ""
+        };
+      });
+
+      const ws = XLSX.utils.json_to_sheet(rows, { skipHeader: false });
+      ws["!cols"] = [
+        { wch: 12 }, { wch: 44 }, { wch: 32 }, { wch: 12 }, { wch: 8 },
+        { wch: 14 }, { wch: 18 }, { wch: 6 }, { wch: 44 }, { wch: 20 },
+        { wch: 20 }, { wch: 16 }, { wch: 20 }, { wch: 26 }, { wch: 18 }
+      ];
+      const range = XLSX.utils.decode_range(ws["!ref"] || "A1:A1");
+      ws["!autofilter"] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: 0, c: range.e.c } }) };
+      ws["!freeze"] = { xSplit: 0, ySplit: 1 };
+      XLSX.utils.book_append_sheet(wb, ws, "Проверки");
+
+      const summary = sources.map(s => {
+        const w = weekChecks(s.id);
+        const last = lastCheck(s.id);
+        const hasNew = w.some(x => x.status === "Новый выпуск");
+        return {
+          "ID источника": s.id,
+          "Источник": s.name,
+          "URL": s.url || "",
+          "Проверок за 7 дней": w.length,
+          "Новый выпуск за 7 дней": hasNew ? "Да" : "Нет",
+          "Последняя проверка (дата)": last ? formatDateRU(last.date) : "",
+          "Последняя проверка (время)": last ? (last.time || "") : "",
+          "Последний статус": last ? (last.status || "") : "",
+          "Последний выпуск": last ? (last.issueNumber || "") : ""
+        };
+      });
+      const ws2 = XLSX.utils.json_to_sheet(summary, { skipHeader: false });
+      ws2["!cols"] = [{wch:12},{wch:48},{wch:34},{wch:18},{wch:22},{wch:22},{wch:18},{wch:16},{wch:20}];
+      const r2 = XLSX.utils.decode_range(ws2["!ref"] || "A1:A1");
+      ws2["!autofilter"] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: 0, c: r2.e.c } }) };
+      ws2["!freeze"] = { xSplit: 0, ySplit: 1 };
+      XLSX.utils.book_append_sheet(wb, ws2, "Сводка");
+
+      const filename = `litreview_all_${isoToday()}.xlsx`;
+      XLSX.writeFile(wb, filename);
+      toast(`Готово: ${filename}`, "ok");
+    }
+
+    function exportAllCsv(){
+      const rows = stableSortChecks(checks).map(c => {
+        const s = sourcesById.get(c.sourceId);
+        return {
+          "ID источника": c.sourceId,
+          "Источник": s ? s.name : "",
+          "URL": s ? (s.url || "") : "",
+          "Дата": formatDateRU(c.date),
+          "Время": c.time || "",
+          "Статус": c.status || "",
+          "Номер выпуска": c.issueNumber || "",
+          "НЯ": c.nyDetected || "",
+          "Автор и название статьи": c.articleInfo || "",
+          "Препарат": c.drugName || "",
+          "Результат": c.result || "",
+          "Дата PV-Hub": c.pvHubDate || "",
+          "Ответственный": c.responsible || "",
+          "Комментарий": c.note || "",
+          "Создано (timestamp)": c.createdAt || ""
+        };
+      });
+      const csv = toCsv(rows);
+      const filename = `litreview_all_${isoToday()}.csv`;
+      downloadText(filename, csv);
+      toast(`XLSX не найден — выгружен CSV: ${filename}`, "warn");
+    }
+
+    function exportWeekXlsx(){
+      const wb = XLSX.utils.book_new();
+      const { start, end } = weekWindowDays();
+
+      const inWeek = stableSortChecks(checks.filter(c => isInLast7Days(c.date))).map(c => {
+        const s = sourcesById.get(c.sourceId);
+        return {
+          "ID источника": c.sourceId,
+          "Источник": s ? s.name : "",
+          "Дата": formatDateRU(c.date),
+          "Время": c.time || "",
+          "Статус": c.status || "",
+          "Номер выпуска": c.issueNumber || "",
+          "НЯ": c.nyDetected || "",
+          "Автор и название статьи": c.articleInfo || "",
+          "Препарат": c.drugName || "",
+          "Результат": c.result || "",
+          "Дата PV-Hub": c.pvHubDate || "",
+          "Ответственный": c.responsible || "",
+          "Комментарий": c.note || ""
+        };
+      });
+
+      const ws = XLSX.utils.json_to_sheet(inWeek, { skipHeader: false });
+      ws["!cols"] = [{wch:12},{wch:48},{wch:12},{wch:8},{wch:14},{wch:18},{wch:6},{wch:44},{wch:20},{wch:20},{wch:16},{wch:20},{wch:26}];
+      const range = XLSX.utils.decode_range(ws["!ref"] || "A1:A1");
+      ws["!autofilter"] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: 0, c: range.e.c } }) };
+      ws["!freeze"] = { xSplit: 0, ySplit: 1 };
+      XLSX.utils.book_append_sheet(wb, ws, "Проверки_неделя");
+
+      const coverage = sources.map(s => {
+        const w = weekChecks(s.id);
+        const hasNew = w.some(x => x.status === "Новый выпуск");
+        return {
+          "ID источника": s.id,
+          "Источник": s.name,
+          "Проверок за неделю": w.length,
+          "Новый выпуск": hasNew ? "Да" : "Нет",
+          "Статус покрытия": w.length ? "Проверено" : "Не проверялся",
+          "Примечание": w.length ? "" : "Не проверялся на этой неделе"
+        };
+      });
+      const ws2 = XLSX.utils.json_to_sheet(coverage, { skipHeader: false });
+      ws2["!cols"] = [{wch:12},{wch:52},{wch:18},{wch:14},{wch:18},{wch:30}];
+      const r2 = XLSX.utils.decode_range(ws2["!ref"] || "A1:A1");
+      ws2["!autofilter"] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: 0, c: r2.e.c } }) };
+      ws2["!freeze"] = { xSplit: 0, ySplit: 1 };
+      XLSX.utils.book_append_sheet(wb, ws2, "Покрытие");
+
+      const s = `${pad2(start.getDate())}${pad2(start.getMonth()+1)}${start.getFullYear()}`;
+      const e = `${pad2(end.getDate())}${pad2(end.getMonth()+1)}${end.getFullYear()}`;
+      const filename = `litreview_week_${s}-${e}.xlsx`;
+      XLSX.writeFile(wb, filename);
+      toast(`Готово: ${filename}`, "ok");
+    }
+
+    function exportWeekCsv(){
+      const inWeek = stableSortChecks(checks.filter(c => isInLast7Days(c.date))).map(c => {
+        const s = sourcesById.get(c.sourceId);
+        return {
+          "ID источника": c.sourceId,
+          "Источник": s ? s.name : "",
+          "Дата": formatDateRU(c.date),
+          "Время": c.time || "",
+          "Статус": c.status || "",
+          "Номер выпуска": c.issueNumber || "",
+          "НЯ": c.nyDetected || "",
+          "Автор и название статьи": c.articleInfo || "",
+          "Препарат": c.drugName || "",
+          "Результат": c.result || "",
+          "Дата PV-Hub": c.pvHubDate || "",
+          "Ответственный": c.responsible || "",
+          "Комментарий": c.note || ""
+        };
+      });
+      const csv = toCsv(inWeek);
+      const filename = `litreview_week_${isoToday()}.csv`;
+      downloadText(filename, csv);
+      toast(`XLSX не найден — выгружен CSV: ${filename}`, "warn");
+    }
+
+    // ------------------------------------------------------------
+    // Tabs
+    // ------------------------------------------------------------
+    function setTab(tab){
+      const sourcesTab = (tab === "sources");
+      $("#tabSources").classList.toggle("active", sourcesTab);
+      $("#tabLog").classList.toggle("active", !sourcesTab);
+      $("#tabSources").setAttribute("aria-selected", sourcesTab ? "true" : "false");
+      $("#tabLog").setAttribute("aria-selected", !sourcesTab ? "true" : "false");
+
+      $("#viewSources").classList.toggle("hidden", !sourcesTab);
+      $("#viewLog").classList.toggle("hidden", sourcesTab);
+    }
+
+    // ------------------------------------------------------------
+    // Init
+    // ------------------------------------------------------------
+    function bindEvents(){
+      const exportMenuCtl = setupMenu("exportMenu", "btnExportMenu");
+      const themeMenuCtl = setupMenu("themeMenu", "btnTheme");
+
+      document.querySelectorAll("#themeMenu [data-theme]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          applyTheme(btn.getAttribute("data-theme"));
+          themeMenuCtl?.menu?.classList.remove("open");
+          themeMenuCtl?.btn?.setAttribute("aria-expanded","false");
+        });
+      });
+
+      $("#compactToggle").addEventListener("change", (e) => applyDensity(e.target.checked ? "compact" : "comfortable"));
+      $("#checkDate").value = isoToday();
+
+      $("#btnConnectBackup").addEventListener("click", connectBackupFile);
+
+      $("#miExportAll").addEventListener("click", () => { exportAll(); exportMenuCtl?.menu?.classList.remove("open"); });
+      $("#miExportWeek").addEventListener("click", () => { exportWeek(); exportMenuCtl?.menu?.classList.remove("open"); });
+      $("#miDownloadJson").addEventListener("click", () => { downloadBackupJSON(); exportMenuCtl?.menu?.classList.remove("open"); });
+
+      $("#filterSelect").addEventListener("change", () => { renderSources(); renderLog(); renderStats(); });
+      $("#searchInput").addEventListener("input", () => { renderSources(); renderLog(); });
+
+      $("#btnWipe").addEventListener("click", wipe);
+
+      $("#tabSources").addEventListener("click", () => setTab("sources"));
+      $("#tabLog").addEventListener("click", () => setTab("log"));
+
+      $("#dlgClose").addEventListener("click", closeDialog);
+      $("#dlgCancel").addEventListener("click", closeDialog);
+      $("#dlgSave").addEventListener("click", saveDialog);
+      $("#fStatus").addEventListener("change", applyDialogVisibility);
+
+      $("#checkDlg").addEventListener("cancel", (e) => { e.preventDefault(); closeDialog(); });
+
+      // Card buttons (event delegation)
+      $("#viewSources").addEventListener("click", (e) => {
+        const btn = e.target.closest("button[data-action]");
+        if (!btn) return;
+        const action = btn.getAttribute("data-action");
+        const sourceId = Number(btn.getAttribute("data-source"));
+        const mode = btn.getAttribute("data-mode");
+        if (action === "quick-ok") addCheckQuick(sourceId);
+        else if (action === "open-dlg") openDialog(sourceId, mode);
+      });
+
+      // Hints
+      window.addEventListener("load", () => {
+        setTimeout(() => {
+          if (!supportsFSAccess()) {
+            toast("В этом браузере нет прямой записи в файл. JSON можно скачать через “Экспорт”.", "warn");
+          } else {
+            let lastName = "";
+            try { lastName = localStorage.getItem(BACKUP_HANDLE_NAME_KEY) || ""; } catch(e) {}
+            if (lastName) toast(`Чтобы включить автобэкап: “Подключить бэкап” → выбери ${lastName}.`, "info");
+            else toast("Чтобы включить автобэкап: нажми “Подключить бэкап” и выбери файл.", "info");
+          }
+
+          if (!hasXlsx()) {
+            toast("Экспорт в XLSX: положи xlsx.full.min.js рядом с HTML (офлайн) — либо будет автоподгрузка CDN при наличии интернета. Иначе экспорт пойдёт в CSV.", "warn");
+          }
+        }, 260);
+      });
+    }
+
+    function init(){
+      sources = DEFAULT_SOURCES.slice();
+      rebuildMaps();
+
+      applyTheme(loadTheme());
+      applyDensity(loadDensity());
+
+      setBackupUI(false);
+
+      load();
+      setTab("sources");
+      syncViews();
+
+      bindEvents();
+    }
+
+    init();
+  </script>
+</body>
+</html>

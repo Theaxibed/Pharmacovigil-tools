@@ -1,0 +1,1150 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="strict">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PV · Отчёт по препарату</title>
+
+  <!-- Optional offline xlsx: put xlsx.full.min.js рядом, как в литобзоре -->
+  <script src="./xlsx.full.min.js" defer></script>
+  <script>
+    // запасной CDN (если есть интернет) — без него тоже ок
+    window.addEventListener("DOMContentLoaded", () => {
+      setTimeout(() => {
+        if (!window.XLSX) {
+          const s = document.createElement("script");
+          s.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+          s.defer = true;
+          document.head.appendChild(s);
+        }
+      }, 60);
+    });
+  </script>
+
+  <style>
+    :root{
+      --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --bg: #0b0c0e;
+      --panel: rgba(255,255,255,.04);
+      --panel2: rgba(255,255,255,.06);
+      --text: rgba(255,255,255,.92);
+      --muted: rgba(255,255,255,.66);
+      --muted2: rgba(255,255,255,.52);
+      --border: rgba(255,255,255,.12);
+      --border2: rgba(255,255,255,.22);
+      --shadow: 0 18px 60px rgba(0,0,0,0.55);
+      --r: 16px;
+      --r2: 12px;
+      --btnBg: rgba(255,255,255,.06);
+      --btnBgHover: rgba(255,255,255,.10);
+      --danger: rgba(255,255,255,.92);
+      --dangerBg: rgba(255,255,255,.10);
+      --okBg: rgba(255,255,255,.08);
+    }
+    html[data-theme="paper"]{
+      --bg:#f6f6f6;
+      --panel: rgba(0,0,0,.03);
+      --panel2: rgba(0,0,0,.05);
+      --text: rgba(0,0,0,.92);
+      --muted: rgba(0,0,0,.62);
+      --muted2: rgba(0,0,0,.52);
+      --border: rgba(0,0,0,.12);
+      --border2: rgba(0,0,0,.22);
+      --shadow: 0 18px 60px rgba(0,0,0,.10);
+      --btnBg: rgba(0,0,0,.05);
+      --btnBgHover: rgba(0,0,0,.08);
+      --danger: rgba(0,0,0,.92);
+      --dangerBg: rgba(0,0,0,.08);
+      --okBg: rgba(0,0,0,.06);
+    }
+
+    *{ box-sizing: border-box; }
+    body{
+      margin:0;
+      font-family: var(--font);
+      color: var(--text);
+      background: radial-gradient(900px 500px at 30% -10%, rgba(255,255,255,.06), transparent 60%),
+                  radial-gradient(800px 520px at 85% 0%, rgba(255,255,255,.04), transparent 60%),
+                  var(--bg);
+    }
+    .wrap{
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 18px;
+      display: grid;
+      gap: 14px;
+    }
+    .topbar{
+      display:flex;
+      align-items:center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 16px;
+      border-radius: var(--r);
+      background: color-mix(in srgb, var(--panel2) 80%, transparent);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+    }
+    .brand{ display:flex; align-items:center; gap: 12px; min-width: 0; }
+    .logo{
+      width: 34px; height: 34px;
+      border-radius: 12px;
+      border: 1px solid var(--border2);
+      background:
+        linear-gradient(135deg, rgba(255,255,255,.12), rgba(255,255,255,.02)),
+        radial-gradient(10px 10px at 70% 30%, rgba(255,255,255,.20), transparent 60%);
+      box-shadow: 0 8px 26px rgba(0,0,0,.35);
+      flex: 0 0 auto;
+    }
+    h1{ margin:0; font-size: 14px; letter-spacing: .2px; }
+    .sub{ margin-top: 2px; font-family: var(--mono); font-size: 12px; color: var(--muted); }
+    .actions{ display:flex; align-items:center; gap: 10px; flex-wrap: wrap; justify-content:flex-end; }
+    .btn{
+      appearance:none;
+      border: 1px solid var(--border);
+      background: var(--btnBg);
+      color: var(--text);
+      border-radius: 999px;
+      padding: 10px 12px;
+      font-size: 12px;
+      font-weight: 900;
+      cursor:pointer;
+      display:inline-flex;
+      align-items:center;
+      gap: 8px;
+      user-select: none;
+    }
+    .btn:hover{ background: var(--btnBgHover); border-color: var(--border2); }
+    .btn.primary{
+      background: color-mix(in srgb, var(--text) 10%, transparent);
+      border-color: color-mix(in srgb, var(--text) 20%, transparent);
+    }
+    .btn.ghost{ background: transparent; }
+    .btn.danger{
+      background: var(--dangerBg);
+      border-color: color-mix(in srgb, var(--danger) 30%, transparent);
+    }
+    .pill{
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 7px 10px;
+      background: var(--panel);
+      white-space: nowrap;
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns: 420px 1fr;
+      gap: 14px;
+      align-items:start;
+    }
+    @media (max-width: 980px){
+      .grid{ grid-template-columns: 1fr; }
+    }
+
+    .panel{
+      border-radius: var(--r);
+      border: 1px solid var(--border);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      backdrop-filter: blur(10px);
+    }
+    .phd{
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      display:flex;
+      justify-content: space-between;
+      align-items:flex-start;
+      gap: 10px;
+    }
+    .ptitle{ margin:0; font-size: 13px; font-weight: 950; }
+    .phint{ margin-top: 4px; font-size: 12px; color: var(--muted); }
+    .pbd{ padding: 14px 16px; }
+
+    .form{
+      display:grid;
+      gap: 10px;
+    }
+    .row2{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    @media (max-width: 520px){
+      .row2{ grid-template-columns: 1fr; }
+    }
+    label{ font-size: 12px; color: var(--muted); display:block; margin-bottom: 6px; }
+    .input, select, textarea{
+      width: 100%;
+      border: 1px solid var(--border);
+      background: color-mix(in srgb, var(--panel2) 82%, transparent);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 11px 12px;
+      font-size: 13px;
+      outline: none;
+    }
+    textarea{ min-height: 88px; resize: vertical; }
+    .input:focus, select:focus, textarea:focus{ border-color: var(--border2); }
+    .muted{ color: var(--muted); font-size: 12px; }
+    .hr{ height:1px; background: var(--border); margin: 12px 0; }
+
+    /* Report preview */
+    .preview{
+      background: color-mix(in srgb, var(--panel2) 88%, transparent);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 16px;
+      overflow:auto;
+      max-height: calc(100vh - 170px);
+    }
+    .doc{
+      background: #ffffff;
+      color: #000000;
+      border-radius: 10px;
+      padding: 18px 18px 22px;
+      margin: 0 auto;
+      min-width: 860px;
+      box-shadow: 0 18px 60px rgba(0,0,0,.18);
+      font-family: Calibri, Arial, sans-serif;
+      font-size: 12pt;
+      line-height: 1.25;
+    }
+    .doc .center{ text-align:center; }
+    .doc .right{ text-align:right; }
+    .doc .title{ font-weight: 700; }
+    .doc .small{ font-size: 10pt; }
+    .doc .mt8{ margin-top: 8px; }
+    .doc .mt12{ margin-top: 12px; }
+    .doc .mt16{ margin-top: 16px; }
+    .doc table{
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+      font-size: 10.5pt;
+    }
+    .doc td, .doc th{
+      border: 1px solid #000;
+      padding: 6px 6px;
+      vertical-align: top;
+    }
+    .doc th{ font-weight: 700; text-align: center; }
+    .doc .noborder td{ border: 0; padding: 0; }
+    .doc .sign td{ border: 0; padding: 6px 0; }
+
+    /* Print only the doc */
+    @media print{
+      body{ background: #fff !important; }
+      .topbar, .panel, .preview{ display:none !important; }
+      #printArea{ display:block !important; }
+      #printArea .doc{
+        box-shadow: none;
+        border-radius: 0;
+        min-width: auto;
+        padding: 0;
+        margin: 0;
+      }
+    }
+
+    /* Toast */
+    .toast{
+      position: fixed;
+      right: 16px;
+      bottom: 16px;
+      z-index: 50;
+      display:flex;
+      flex-direction: column;
+      gap: 10px;
+      max-width: min(460px, calc(100vw - 32px));
+      pointer-events:none;
+    }
+    .t{
+      pointer-events:auto;
+      display:flex;
+      gap: 10px;
+      align-items:flex-start;
+      padding: 12px 12px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: color-mix(in srgb, var(--panel2) 85%, transparent);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+      animation: pop .18s ease-out;
+    }
+    @keyframes pop{ from{ transform: translateY(6px); opacity: .0; } to{ transform: translateY(0); opacity: 1; } }
+    .t .ic{ width: 18px; height: 18px; margin-top: 2px; font-weight: 900; }
+    .t .txt{ font-size: 13px; line-height: 1.35; }
+    .t .x{
+      margin-left:auto;
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      padding: 2px 6px;
+      font-size: 16px;
+      line-height: 1;
+    }
+    .t .x:hover{ color: var(--text); }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div style="min-width:0;">
+          <h1>PV · Отчёт по препарату</h1>
+          <div class="sub">Генерация отчёта + экспорт (Word/PDF/Excel)</div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <span class="pill" id="dataPill">Данные: не загружены</span>
+        <button class="btn ghost" id="btnTheme" title="Сменить тему">Тема</button>
+        <button class="btn" id="btnLoadFromStorage" title="Попробовать забрать записи литобзора из localStorage">Подхватить из Литобзора</button>
+        <button class="btn" id="btnImportJson">Импорт JSON</button>
+        <button class="btn primary" id="btnExportDoc">Экспорт Word</button>
+        <button class="btn" id="btnPrint">PDF/Печать</button>
+        <button class="btn" id="btnExportXlsx">Excel (таблицы)</button>
+      </div>
+    </header>
+
+    <div class="grid">
+      <section class="panel">
+        <div class="phd">
+          <div>
+            <p class="ptitle">Параметры отчёта</p>
+            <p class="phint">Собираем отчёт как в шаблоне: соглашение, период, PV, таблицы, подписи.</p>
+          </div>
+        </div>
+        <div class="pbd">
+          <div class="form">
+            <div class="row2">
+              <div>
+                <label>Соглашение №</label>
+                <input class="input" id="fAgrNo" placeholder="1" />
+              </div>
+              <div>
+                <label>Дата соглашения</label>
+                <input class="input" id="fAgrDate" type="date" />
+              </div>
+            </div>
+
+            <div class="row2">
+              <div>
+                <label>Период: с</label>
+                <input class="input" id="fFrom" type="date" />
+              </div>
+              <div>
+                <label>Период: по</label>
+                <input class="input" id="fTo" type="date" />
+              </div>
+            </div>
+
+            <div>
+              <label>Препарат (полное наименование)</label>
+              <input class="input" id="fDrugFull" placeholder="Miglustat Dipharma hard capsules 100 mg №84 (4x21) ..." />
+              <div class="muted" style="margin-top:6px;">Если нужно — выбери пресет ниже и мы подставим основу.</div>
+            </div>
+
+            <div class="row2">
+              <div>
+                <label>Пресет</label>
+                <select id="fPreset">
+                  <option value="custom">— вручную —</option>
+                  <option value="miglustat">Миглустат</option>
+                  <option value="nitisinone">Нитизинон</option>
+                  <option value="sapropterin">Сапроптерин</option>
+                </select>
+              </div>
+              <div>
+                <label>Производитель</label>
+                <input class="input" id="fMfg" placeholder="Алмеда / Dipharma / ..." />
+              </div>
+            </div>
+
+            <div class="hr"></div>
+
+            <div>
+              <label>Приложение: форм НР/НЯ/ОС (число случаев / листов)</label>
+              <div class="row2">
+                <input class="input" id="fCases" type="number" min="0" placeholder="0" />
+                <input class="input" id="fSheets" type="number" min="0" placeholder="0" />
+              </div>
+            </div>
+
+            <div>
+              <label>Изменения в законодательстве (RU)</label>
+              <textarea id="fLawRu" class="input"></textarea>
+            </div>
+            <div>
+              <label>Changes in legislation (EN)</label>
+              <textarea id="fLawEn" class="input"></textarea>
+            </div>
+
+            <div class="hr"></div>
+
+            <div>
+              <label>Контактное лицо по фармаконадзору (RU/EN)</label>
+              <input class="input" id="fContactRu" placeholder="ООО «ASTOR ALLIANCE»" />
+              <input class="input" id="fContactEn" placeholder="ASTOR ALLIANCE LLC" style="margin-top:10px;" />
+              <input class="input" id="fContactName" placeholder="Ниязова У.Х." style="margin-top:10px;" />
+            </div>
+
+            <div class="row2">
+              <div>
+                <label>Исполнитель (ФИО)</label>
+                <input class="input" id="fExecName" placeholder="B.A.Olimjonov" />
+              </div>
+              <div>
+                <label>Заказчик (ФИО)</label>
+                <input class="input" id="fCustName" placeholder="Ala Tocarciuc" />
+              </div>
+            </div>
+
+            <div class="row2">
+              <button class="btn" id="btnAddCase">+ Добавить кейс НР/НЯ/ОС</button>
+              <button class="btn danger" id="btnClearCases">Очистить кейсы</button>
+            </div>
+            <div class="muted">Если кейсов нет — отчёт автоматически покажет “—/—/—” и в приложении будет 0/0.</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="preview" aria-label="Предпросмотр отчёта">
+        <div class="muted" style="margin:0 0 10px 2px;">Предпросмотр (внутри — “лист Word”). Экспорт Word берёт этот контент.</div>
+        <div id="previewHost"></div>
+      </section>
+    </div>
+  </div>
+
+  <!-- hidden print area (same markup) -->
+  <div id="printArea" style="display:none;"></div>
+
+  <!-- Case editor dialog -->
+  <dialog id="caseDlg" style="border: 1px solid var(--border); border-radius: 16px; background: var(--bg); color: var(--text); padding: 0; max-width: 740px; width: calc(100vw - 32px);">
+    <div style="padding: 14px 16px; border-bottom: 1px solid var(--border); display:flex; align-items:center; justify-content: space-between; gap: 12px;">
+      <div>
+        <div style="font-weight: 950; font-size: 13px;">Кейс НР/НЯ/ОС</div>
+        <div class="muted" style="margin-top:4px;">Заполни только если есть сообщения. Иначе можно не трогать.</div>
+      </div>
+      <button class="btn ghost" id="caseClose" aria-label="Закрыть">✕</button>
+    </div>
+    <div style="padding: 14px 16px;">
+      <div class="row2">
+        <div>
+          <label>Номер</label>
+          <input class="input" id="cNum" placeholder="1" />
+        </div>
+        <div>
+          <label>Дата поступления</label>
+          <input class="input" id="cDate" type="date" />
+        </div>
+      </div>
+      <div class="row2" style="margin-top:10px;">
+        <div>
+          <label>Источник</label>
+          <input class="input" id="cSource" placeholder="email / сайт / врач / ..." />
+        </div>
+        <div>
+          <label>Исход</label>
+          <input class="input" id="cOutcome" placeholder="—" />
+        </div>
+      </div>
+      <div style="margin-top:10px;">
+        <label>Описание сообщения</label>
+        <textarea class="input" id="cDesc" placeholder="Краткое описание..."></textarea>
+      </div>
+      <div style="margin-top:10px;">
+        <label>Заключение (включая анализ причин и оценку причинно-следственной связи)</label>
+        <textarea class="input" id="cConclusion" placeholder="Вывод/оценка..."></textarea>
+      </div>
+    </div>
+    <div style="padding: 14px 16px; border-top: 1px solid var(--border); display:flex; gap: 10px; justify-content:flex-end;">
+      <button class="btn" id="caseCancel">Отмена</button>
+      <button class="btn primary" id="caseSave">Сохранить</button>
+    </div>
+  </dialog>
+
+  <!-- Import json -->
+  <input type="file" id="fileJson" accept=".json,application/json" style="display:none;" />
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const LIT_STORAGE_KEYS = ["litreview_monitor_master_v2","litreview_monitor_master_v1","litreview_monitor_v4_themes","litreview_monitor_v3_minimal","litreview_monitor_v2","literatureMonitoring"];
+    const REPORT_KEY = "pv_report_builder_v1";
+    const THEME_KEY = "pv_report_theme_v1";
+
+    const DEFAULT_LAW_RU = "В течение квартала изменений в законодательстве Республики Узбекистан не выявлено";
+    const DEFAULT_LAW_EN = "no changes in the legislation of the Republic of Uzbekistan were detected during the quarter";
+
+    const JOURNALS = [
+      { id: 1,  name: "Medical Express" },
+      { id: 2,  name: "Website of the Regulatory Authority (uzpharm-control.uz)" },
+      { id: 3,  name: "Bulletin of the Association of Physicians of Uzbekistan" },
+      { id: 4,  name: "Journal of General Practitioner" },
+      { id: 5,  name: "Herald of the Tashkent Medical Academy" },
+      { id: 6,  name: "Herald of Emergency Medicine" },
+      { id: 7,  name: "Dermatovenerology and Aesthetic Medicine" },
+      { id: 8,  name: "Eurasian Bulletin of Pediatrics" },
+      { id: 9,  name: "Eurasian Journal of Otorhinolaryngology — Head and Neck Surgery" },
+      { id: 10, name: "Journal of Biomedicine and Practice" },
+      { id: 11, name: "Journal of Hepato-Gastroenterological Research" },
+      { id: 12, name: "Journal of Cardiorespiratory Research" },
+      { id: 13, name: "Journal of Neurology and Neurosurgical Research" },
+      { id: 14, name: "Journal of Reproductive Health and Uro-Nephrological Research" },
+      { id: 15, name: "Journal of Modern Medicine" },
+      { id: 16, name: "Integrative Dentistry and Maxillofacial Surgery" },
+      { id: 17, name: "Infection, Immunity and Pharmacology" },
+      { id: 18, name: "Cardiology of Uzbekistan" },
+      { id: 19, name: "News of Dermatovenerology and Reproductive Health" },
+      { id: 20, name: "Pediatrics" },
+      { id: 21, name: "Advanced Ophthalmology" },
+      { id: 22, name: "Problems of Biology and Medicine" },
+      { id: 23, name: "Traumatology, Orthopedics and Rehabilitation" },
+      { id: 24, name: "Uzbek Medical Journal" },
+      { id: 25, name: "Universal International Scientific Journal" }
+    ];
+
+    let litChecks = []; // from litreview
+    let reportState = {
+      agreementNo: "1",
+      agreementDate: "",
+      periodFrom: "",
+      periodTo: "",
+      drugFull: "",
+      manufacturer: "",
+      preset: "custom",
+      casesCount: 0,
+      sheetsCount: 0,
+      lawRu: DEFAULT_LAW_RU,
+      lawEn: DEFAULT_LAW_EN,
+      contactRu: "ООО «ASTOR ALLIANCE»",
+      contactEn: "ASTOR ALLIANCE LLC",
+      contactName: "Ниязова У.Х.",
+      execName: "B.A.Olimjonov",
+      custName: "Ala Tocarciuc",
+      cases: []
+    };
+
+    const $ = (s) => document.querySelector(s);
+
+    function toast(message, tone="ok"){
+      const host = $("#toast");
+      const el = document.createElement("div");
+      el.className = "t";
+      const icon = tone==="bad" ? "×" : tone==="warn" ? "!" : "i";
+      el.innerHTML = `
+        <div class="ic" aria-hidden="true">${icon}</div>
+        <div class="txt">${escapeHtml(message)}</div>
+        <button class="x" aria-label="Закрыть">×</button>
+      `;
+      el.querySelector(".x").addEventListener("click", () => el.remove());
+      host.appendChild(el);
+      setTimeout(() => { el.remove(); }, 2600);
+    }
+
+    function escapeHtml(str){
+      return String(str ?? "")
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
+    }
+
+    function pad2(n){ return String(n).padStart(2,"0"); }
+    function formatDateRU(iso){
+      if (!iso) return "";
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return "";
+      return `${pad2(d.getDate())}.${pad2(d.getMonth()+1)}.${d.getFullYear()}`;
+    }
+
+    function betweenISO(iso, from, to){
+      if (!iso || !from || !to) return false;
+      return iso >= from && iso <= to;
+    }
+
+    function loadTheme(){
+      try{ return localStorage.getItem(THEME_KEY) || "strict"; }catch(e){ return "strict"; }
+    }
+    function applyTheme(t){
+      const allowed = new Set(["strict","paper"]);
+      const v = allowed.has(t) ? t : "strict";
+      document.documentElement.setAttribute("data-theme", v);
+      try{ localStorage.setItem(THEME_KEY, v); }catch(e){}
+    }
+
+    function saveReport(){
+      try{ localStorage.setItem(REPORT_KEY, JSON.stringify(reportState)); }catch(e){}
+    }
+    function loadReport(){
+      try{
+        const raw = localStorage.getItem(REPORT_KEY);
+        if (!raw) return;
+        const p = JSON.parse(raw);
+        if (p && typeof p === "object") reportState = { ...reportState, ...p };
+      }catch(e){}
+    }
+
+    function setDataPill(){
+      const pill = $("#dataPill");
+      const n = Array.isArray(litChecks) ? litChecks.length : 0;
+      pill.textContent = n ? `Данные: ${n} записей` : "Данные: не загружены";
+    }
+
+    function tryLoadLitFromStorage(){
+      // Best effort (file:// origin may vary).
+      for (const k of LIT_STORAGE_KEYS){
+        try{
+          const raw = localStorage.getItem(k);
+          if (!raw) continue;
+          const parsed = JSON.parse(raw);
+
+          // New master format
+          if (parsed && Array.isArray(parsed.checks)){
+            litChecks = parsed.checks;
+            setDataPill();
+            toast("Данные из Литобзора подхвачены ✓", "ok");
+            render();
+            return true;
+          }
+
+          // Old literatureMonitoring object (sourceId -> array)
+          if (k === "literatureMonitoring" && parsed && typeof parsed === "object"){
+            const migrated = [];
+            Object.keys(parsed).forEach(key => {
+              const sourceId = Number(key);
+              const arr = Array.isArray(parsed[key]) ? parsed[key] : [];
+              arr.forEach(item => {
+                migrated.push({
+                  sourceId,
+                  date: item.date || "",
+                  time: item.time || "",
+                  status: item.status || "Проверено",
+                  issueNumber: item.issueNumber || "",
+                  nyDetected: (item.articleInfo && item.articleInfo !== "-") ? "Да" : "Нет",
+                  articleInfo: item.articleInfo && item.articleInfo !== "-" ? item.articleInfo : "",
+                  drugName: item.drugName && item.drugName !== "-" ? item.drugName : "",
+                  result: item.result && item.result !== "-" ? item.result : "",
+                  pvHubDate: item.pvHubDate && item.pvHubDate !== "-" ? item.pvHubDate : "",
+                  responsible: item.responsible && item.responsible !== "-" ? item.responsible : "",
+                  createdAt: item.timestamp || Date.now()
+                });
+              });
+            });
+            litChecks = migrated;
+            setDataPill();
+            toast("Данные из старого формата подхвачены ✓", "ok");
+            render();
+            return true;
+          }
+        }catch(e){}
+      }
+      toast("Не нашла данные в localStorage. Импортируй JSON-бэкап.", "warn");
+      return false;
+    }
+
+    function importJsonText(text){
+      try{
+        const parsed = JSON.parse(text);
+        if (parsed && Array.isArray(parsed.checks)){
+          litChecks = parsed.checks;
+          setDataPill();
+          toast("JSON импортирован ✓", "ok");
+          render();
+          return;
+        }
+        // accept raw array of checks
+        if (Array.isArray(parsed)){
+          litChecks = parsed;
+          setDataPill();
+          toast("JSON импортирован ✓", "ok");
+          render();
+          return;
+        }
+        toast("JSON не похож на бэкап литобзора (нет массива checks).", "bad");
+      }catch(e){
+        toast("Не удалось прочитать JSON.", "bad");
+      }
+    }
+
+    function presetToDrug(preset){
+      if (preset === "miglustat"){
+        return "Miglustat Dipharma hard capsules 100 mg №84 (4x21) (blisters integrated into a cardboard envelope)";
+      }
+      if (preset === "nitisinone"){
+        return "Nitisinone (укажи форму/дозировку/упаковку здесь)";
+      }
+      if (preset === "sapropterin"){
+        return "Sapropterin (укажи форму/дозировку/упаковку здесь)";
+      }
+      return "";
+    }
+
+    function bindForm(){
+      $("#fAgrNo").value = reportState.agreementNo || "";
+      $("#fAgrDate").value = reportState.agreementDate || "";
+      $("#fFrom").value = reportState.periodFrom || "";
+      $("#fTo").value = reportState.periodTo || "";
+      $("#fDrugFull").value = reportState.drugFull || "";
+      $("#fMfg").value = reportState.manufacturer || "";
+      $("#fPreset").value = reportState.preset || "custom";
+      $("#fCases").value = String(reportState.casesCount ?? 0);
+      $("#fSheets").value = String(reportState.sheetsCount ?? 0);
+      $("#fLawRu").value = reportState.lawRu || DEFAULT_LAW_RU;
+      $("#fLawEn").value = reportState.lawEn || DEFAULT_LAW_EN;
+      $("#fContactRu").value = reportState.contactRu || "";
+      $("#fContactEn").value = reportState.contactEn || "";
+      $("#fContactName").value = reportState.contactName || "";
+      $("#fExecName").value = reportState.execName || "";
+      $("#fCustName").value = reportState.custName || "";
+    }
+
+    function syncStateFromForm(){
+      reportState.agreementNo = ($("#fAgrNo").value || "").trim();
+      reportState.agreementDate = $("#fAgrDate").value || "";
+      reportState.periodFrom = $("#fFrom").value || "";
+      reportState.periodTo = $("#fTo").value || "";
+      reportState.drugFull = ($("#fDrugFull").value || "").trim();
+      reportState.manufacturer = ($("#fMfg").value || "").trim();
+      reportState.preset = $("#fPreset").value || "custom";
+      reportState.casesCount = Number($("#fCases").value || 0) || 0;
+      reportState.sheetsCount = Number($("#fSheets").value || 0) || 0;
+      reportState.lawRu = ($("#fLawRu").value || "").trim();
+      reportState.lawEn = ($("#fLawEn").value || "").trim();
+      reportState.contactRu = ($("#fContactRu").value || "").trim();
+      reportState.contactEn = ($("#fContactEn").value || "").trim();
+      reportState.contactName = ($("#fContactName").value || "").trim();
+      reportState.execName = ($("#fExecName").value || "").trim();
+      reportState.custName = ($("#fCustName").value || "").trim();
+      saveReport();
+    }
+
+    function getLitRowsForPeriod(){
+      const from = reportState.periodFrom;
+      const to = reportState.periodTo;
+      if (!from || !to) return [];
+      return (litChecks || []).filter(c => betweenISO(c.date, from, to));
+    }
+
+    function buildLiteraryTableRows(){
+      const drugNeedle = (reportState.preset === "custom" ? "" : reportState.preset).toLowerCase();
+      const periodRows = getLitRowsForPeriod();
+      const manualDrug = (reportState.drugFull || "").toLowerCase();
+      const mfg = (reportState.manufacturer || "").toLowerCase();
+
+      function matchesDrug(c){
+        const d = String(c.drugName || "").toLowerCase();
+        if (!d) return false;
+        if (drugNeedle === "miglustat" && d.includes("miglu")) return true;
+        if (drugNeedle === "nitisinone" && d.includes("niti")) return true;
+        if (drugNeedle === "sapropterin" && d.includes("sapro")) return true;
+        if (manualDrug && d.includes(manualDrug.slice(0, Math.min(14, manualDrug.length)))) return true;
+        if (mfg && d.includes(mfg)) return true;
+        if (reportState.preset === "custom") return true;
+        return false;
+      }
+
+      const rowsForDrug = periodRows.filter(matchesDrug);
+
+      const bySource = new Map();
+      rowsForDrug.forEach(r => {
+        const sid = Number(r.sourceId);
+        if (!bySource.has(sid)) bySource.set(sid, []);
+        bySource.get(sid).push(r);
+      });
+
+      return JOURNALS.map(j => {
+        const arr = bySource.get(j.id) || [];
+        const sorted = arr.slice().sort((a,b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
+        const anyFound = sorted.some(x => (x.status === "Новый выпуск") && ((String(x.nyDetected||"").toLowerCase()==="да") || (x.articleInfo && String(x.articleInfo).trim())));
+        const title = anyFound ? (sorted.find(x => x.articleInfo && String(x.articleInfo).trim())?.articleInfo || "-") : "-";
+        return { no: j.id, name: j.name, result: anyFound ? "found" : "not found", article: title || "-" };
+      });
+    }
+
+    function docHtml(){
+      const agrNo = reportState.agreementNo || "—";
+      const agrDate = reportState.agreementDate ? formatDateRU(reportState.agreementDate) : "—";
+      const from = reportState.periodFrom ? formatDateRU(reportState.periodFrom) : "—";
+      const to = reportState.periodTo ? formatDateRU(reportState.periodTo) : "—";
+      const drug = reportState.drugFull || "—";
+      const mfg = reportState.manufacturer ? ` (${reportState.manufacturer})` : "";
+
+      const cases = Array.isArray(reportState.cases) ? reportState.cases : [];
+      const caseRows = cases.length ? cases : [{ num: "1", date: "", source: "", desc: "", outcome: "", conclusion: "" }];
+
+      const casesCount = Number(reportState.casesCount ?? 0) || 0;
+      const sheetsCount = Number(reportState.sheetsCount ?? 0) || 0;
+
+      const litRows = buildLiteraryTableRows();
+
+      return `
+        <div class="doc" id="docRoot">
+          <div class="title">Отчет по соглашению&nbsp;&nbsp; № ${escapeHtml(agrNo)}&nbsp; от ${escapeHtml(agrDate)} года</div>
+          <div class="mt8">Report on agreement&nbsp;&nbsp;&nbsp;&nbsp; No.&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; dated</div>
+
+          <div class="mt12 center">за период с ${escapeHtml(from)} по ${escapeHtml(to)} года</div>
+          <div class="center small">for the period&nbsp;&nbsp; from&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; to</div>
+
+          <div class="mt12">
+            о проделанной работе по Фармаконадзору по препарату ${escapeHtml(drug)}${escapeHtml(mfg)}
+          </div>
+          <div class="mt8">on the work done on Pharmacovigilance for the drug</div>
+
+          <div class="mt16 title">Полученные и обработанные индивидуальные сообщения о нежелательных реакциях и особых ситуациях</div>
+          <div class="mt8">Received and processed individual reports of adverse reactions and special situations</div>
+
+          <table>
+            <thead>
+              <tr>
+                <th style="width:6%;">Номер<br/><span class="small">Number</span></th>
+                <th style="width:12%;">Дата поступления<br/><span class="small">Date of receipt</span></th>
+                <th style="width:12%;">Источник<br/><span class="small">Source</span></th>
+                <th>Описание сообщения<br/><span class="small">Report description</span></th>
+                <th style="width:12%;">Исход<br/><span class="small">Outcome</span></th>
+                <th>Заключение (включая анализ возможных причин возникновения и оценку причинно-следственной связи)<br/>
+                    <span class="small">Conclusion (including analysis of possible causes of occurrence and assessment of cause-and-effect relationship)</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              ${caseRows.map((c, idx) => {
+                const empty = (!cases.length);
+                const d = c.date ? formatDateRU(c.date) : (empty ? "------" : "");
+                const source = c.source ? escapeHtml(c.source) : (empty ? "--------" : "");
+                const desc = c.desc ? escapeHtml(c.desc) : (empty ? "----------" : "");
+                const outc = c.outcome ? escapeHtml(c.outcome) : (empty ? "------------" : "");
+                const concl = c.conclusion ? escapeHtml(c.conclusion) : (empty ? "-------------------" : "");
+                return `
+                  <tr>
+                    <td style="text-align:center;">${escapeHtml(c.num || String(idx+1))}</td>
+                    <td>${escapeHtml(d)}</td>
+                    <td>${source}</td>
+                    <td>${desc}</td>
+                    <td>${outc}</td>
+                    <td>${concl}</td>
+                  </tr>
+                `;
+              }).join("")}
+            </tbody>
+          </table>
+
+          <div class="mt12">
+            Приложение: копии форм регистрации НР/НЯ/ОС в количестве __${escapeHtml(casesCount)}_ случаев на __${escapeHtml(sheetsCount)}__ листах.
+          </div>
+          <div class="mt8">Attachment: copies of AR/AE/SS registration forms&nbsp;&nbsp; in the number of&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; cases on&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; sheets.</div>
+
+          <div class="mt16 title">Прочее</div>
+          <div class="mt8">Miscellaneous</div>
+
+          <div class="mt16 title">Литературный мониторинг/Literary monitoring</div>
+
+          <table>
+            <thead>
+              <tr>
+                <th style="width:6%;">№</th>
+                <th>Наименование журнала<br/><span class="small">Name of the journal</span></th>
+                <th style="width:18%;">Результаты проверки<br/><span class="small">(не вывлены/выявлены)<br/>review results (ADR detected/ADR not detected)</span></th>
+                <th style="width:24%;">Название статьи<br/><span class="small">Article Title</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              ${litRows.map(r => `
+                <tr>
+                  <td style="text-align:center;">${r.no}</td>
+                  <td>${escapeHtml(r.name)}</td>
+                  <td style="text-align:center;">${escapeHtml(r.result)}</td>
+                  <td>${escapeHtml(r.article || "-")}</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+
+          <div class="mt16 title">Изменения в законодательстве/Changes in legislation</div>
+          <div class="mt8">${escapeHtml(reportState.lawRu || DEFAULT_LAW_RU)}</div>
+          <div class="mt8">${escapeHtml(reportState.lawEn || DEFAULT_LAW_EN)}</div>
+
+          <div class="mt16 title">Контактное лицо по фармаконадзору ${escapeHtml(reportState.contactRu || "")}</div>
+          <div class="mt8">Contact person for pharmacovigilance of ${escapeHtml(reportState.contactEn || "")}&nbsp;&nbsp;&nbsp; ${escapeHtml(reportState.contactName || "")}&nbsp; /____________</div>
+
+          <div class="mt16 title">ПОДПИСИ СТОРОН:</div>
+          <div class="mt8 title">SIGNATURES OF THE PARTIES:</div>
+
+          <table class="sign noborder" style="margin-top: 14px;">
+            <tr>
+              <td style="width:50%; font-weight:700;">От ИСПОЛНИТЕЛЯ<br/><span class="small">FROM THE CONTRACTOR</span></td>
+              <td style="width:50%; font-weight:700;">От ЗАКАЗЧИКА<br/><span class="small">FROM THE CUSTOMER</span></td>
+            </tr>
+            <tr>
+              <td> _______________/${escapeHtml(reportState.execName || "")} /</td>
+              <td> _________________/${escapeHtml(reportState.custName || "")} /</td>
+            </tr>
+          </table>
+
+        </div>
+      `;
+    }
+
+    function render(){
+      syncStateFromForm();
+
+      const p = reportState.preset;
+      if (p !== "custom"){
+        const base = presetToDrug(p);
+        if (base && (!reportState.drugFull || reportState.drugFull.trim()==="" || reportState.drugFull.includes("укажи форму"))){
+          reportState.drugFull = base;
+          $("#fDrugFull").value = reportState.drugFull;
+          saveReport();
+        }
+      }
+
+      $("#previewHost").innerHTML = docHtml();
+      $("#printArea").innerHTML = docHtml();
+    }
+
+    function openCaseDlg(){
+      const next = (reportState.cases?.length || 0) + 1;
+      $("#cNum").value = String(next);
+      $("#cDate").value = reportState.periodFrom || "";
+      $("#cSource").value = "";
+      $("#cDesc").value = "";
+      $("#cOutcome").value = "";
+      $("#cConclusion").value = "";
+      $("#caseDlg").showModal();
+    }
+    function closeCaseDlg(){ $("#caseDlg").close(); }
+    function saveCaseFromDlg(){
+      const item = {
+        num: ($("#cNum").value || "").trim() || "1",
+        date: $("#cDate").value || "",
+        source: ($("#cSource").value || "").trim(),
+        desc: ($("#cDesc").value || "").trim(),
+        outcome: ($("#cOutcome").value || "").trim(),
+        conclusion: ($("#cConclusion").value || "").trim()
+      };
+      if (!Array.isArray(reportState.cases)) reportState.cases = [];
+      reportState.cases.push(item);
+      reportState.casesCount = Math.max(reportState.casesCount || 0, reportState.cases.length);
+      $("#fCases").value = String(reportState.casesCount);
+      saveReport();
+      toast("Кейс добавлен ✓", "ok");
+      closeCaseDlg();
+      render();
+    }
+
+    function clearCases(){
+      reportState.cases = [];
+      reportState.casesCount = 0;
+      reportState.sheetsCount = 0;
+      $("#fCases").value = "0";
+      $("#fSheets").value = "0";
+      saveReport();
+      toast("Кейсы очищены", "warn");
+      render();
+    }
+
+    function exportWord(){
+      render();
+      const content = document.getElementById("docRoot").outerHTML;
+
+      const wordHtml = `
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>PV Report</title>
+<style>
+  body{ font-family: Calibri, Arial, sans-serif; font-size: 12pt; line-height: 1.25; }
+  table{ width:100%; border-collapse:collapse; margin-top:8px; font-size:10.5pt; }
+  td, th{ border:1px solid #000; padding:6px 6px; vertical-align:top; }
+  th{ font-weight:700; text-align:center; }
+  .title{ font-weight:700; }
+  .small{ font-size:10pt; }
+  .center{ text-align:center; }
+  .mt8{ margin-top:8px; }
+  .mt12{ margin-top:12px; }
+  .mt16{ margin-top:16px; }
+  .noborder td{ border:0; padding:0; }
+  .sign td{ border:0; padding:6px 0; }
+</style>
+</head>
+<body>
+${content}
+</body>
+</html>`;
+
+      const blob = new Blob([wordHtml], { type: "application/msword;charset=utf-8" });
+
+      const agrNo = (reportState.agreementNo || "report").replace(/[^\w\-]+/g,"_");
+      const from = reportState.periodFrom ? formatDateRU(reportState.periodFrom) : "from";
+      const to = reportState.periodTo ? formatDateRU(reportState.periodTo) : "to";
+      const drugShort = (reportState.preset && reportState.preset !== "custom") ? reportState.preset : "drug";
+      const name = `PV_Report_${drugShort}_${from}-${to}_agr${agrNo}.doc`;
+
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        URL.revokeObjectURL(a.href);
+        a.remove();
+      }, 0);
+
+      toast("Экспорт Word готов ✓", "ok");
+    }
+
+    function doPrint(){
+      render();
+      window.print();
+    }
+
+    function exportXlsx(){
+      const hostRows = buildLiteraryTableRows();
+      const cases = Array.isArray(reportState.cases) ? reportState.cases : [];
+      const period = getLitRowsForPeriod();
+
+      if (!window.XLSX){
+        toast("XLSX не найден. Положи xlsx.full.min.js рядом или включи интернет.", "warn");
+        const csv = [
+          ["№","Name of the journal","review results","Article Title"],
+          ...hostRows.map(r => [r.no, r.name, r.result, r.article || "-"])
+        ].map(row => row.map(x => `"${String(x).replaceAll('"','""')}"`).join(",")).join("\n");
+
+        const blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "literary_monitoring.csv";
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },0);
+        return;
+      }
+
+      const wb = XLSX.utils.book_new();
+
+      const wsCases = XLSX.utils.aoa_to_sheet([
+        ["Number","Date of receipt","Source","Report description","Outcome","Conclusion"],
+        ...(cases.length ? cases : [["1","------","--------","----------","------------","-------------------"]])
+          .map((c, idx) => [
+            c.num || String(idx+1),
+            c.date ? formatDateRU(c.date) : (cases.length ? "" : "------"),
+            c.source || (cases.length ? "" : "--------"),
+            c.desc || (cases.length ? "" : "----------"),
+            c.outcome || (cases.length ? "" : "------------"),
+            c.conclusion || (cases.length ? "" : "-------------------")
+          ])
+      ]);
+      XLSX.utils.book_append_sheet(wb, wsCases, "Cases");
+
+      const wsLit = XLSX.utils.aoa_to_sheet([
+        ["№","Name of the journal","review results (ADR detected/ADR not detected)","Article Title"],
+        ...hostRows.map(r => [r.no, r.name, r.result, r.article || "-"])
+      ]);
+      XLSX.utils.book_append_sheet(wb, wsLit, "Literary monitoring");
+
+      const wsLog = XLSX.utils.aoa_to_sheet([
+        ["Date","Time","SourceId","Status","Issue","NY?","Article","Drug","Result","PV-Hub","Responsible"],
+        ...period.map(c => [
+          formatDateRU(c.date || ""),
+          c.time || "",
+          c.sourceId || "",
+          c.status || "",
+          c.issueNumber || "",
+          c.nyDetected || "",
+          c.articleInfo || "",
+          c.drugName || "",
+          c.result || "",
+          c.pvHubDate || "",
+          c.responsible || ""
+        ])
+      ]);
+      XLSX.utils.book_append_sheet(wb, wsLog, "Period log");
+
+      const from = reportState.periodFrom ? formatDateRU(reportState.periodFrom) : "from";
+      const to = reportState.periodTo ? formatDateRU(reportState.periodTo) : "to";
+      XLSX.writeFile(wb, `PV_tables_${from}-${to}.xlsx`);
+      toast("Excel выгружен ✓", "ok");
+    }
+
+    function wire(){
+      document.addEventListener("input", (e) => {
+        const id = e.target && e.target.id;
+        if (!id) return;
+        if (id.startsWith("f")) render();
+      });
+      $("#fPreset").addEventListener("change", () => render());
+
+      $("#btnTheme").addEventListener("click", () => {
+        const now = document.documentElement.getAttribute("data-theme") || "strict";
+        applyTheme(now === "strict" ? "paper" : "strict");
+      });
+
+      $("#btnLoadFromStorage").addEventListener("click", () => tryLoadLitFromStorage());
+
+      $("#btnImportJson").addEventListener("click", () => $("#fileJson").click());
+      $("#fileJson").addEventListener("change", async (e) => {
+        const f = e.target.files && e.target.files[0];
+        if (!f) return;
+        importJsonText(await f.text());
+        e.target.value = "";
+      });
+
+      $("#btnExportDoc").addEventListener("click", () => exportWord());
+      $("#btnPrint").addEventListener("click", () => doPrint());
+      $("#btnExportXlsx").addEventListener("click", () => exportXlsx());
+
+      $("#btnAddCase").addEventListener("click", (e) => { e.preventDefault(); openCaseDlg(); });
+      $("#btnClearCases").addEventListener("click", (e) => { e.preventDefault(); clearCases(); });
+
+      $("#caseClose").addEventListener("click", closeCaseDlg);
+      $("#caseCancel").addEventListener("click", closeCaseDlg);
+      $("#caseSave").addEventListener("click", saveCaseFromDlg);
+
+      const today = new Date();
+      const y = today.getFullYear();
+      const m = today.getMonth();
+      const q = Math.floor(m/3);
+      const qStartMonth = q*3;
+      const qEndMonth = q*3 + 2;
+
+      function iso(d){
+        const yy = d.getFullYear();
+        const mm = String(d.getMonth()+1).padStart(2,"0");
+        const dd = String(d.getDate()).padStart(2,"0");
+        return `${yy}-${mm}-${dd}`;
+      }
+
+      if (!reportState.periodFrom || !reportState.periodTo){
+        const from = new Date(y, qStartMonth, 1);
+        const to = new Date(y, qEndMonth+1, 0);
+        reportState.periodFrom = reportState.periodFrom || iso(from);
+        reportState.periodTo = reportState.periodTo || iso(to);
+      }
+      if (!reportState.agreementDate){
+        reportState.agreementDate = iso(new Date(y, 0, 1));
+      }
+      if (!reportState.lawRu) reportState.lawRu = DEFAULT_LAW_RU;
+      if (!reportState.lawEn) reportState.lawEn = DEFAULT_LAW_EN;
+
+      bindForm();
+      setDataPill();
+      render();
+    }
+
+    applyTheme(loadTheme());
+    loadReport();
+    window.addEventListener("DOMContentLoaded", wire);
+  </script>
+</body>
+</html>
