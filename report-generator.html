@@ -69,7 +69,7 @@
                   var(--bg);
     }
     .wrap{
-      max-width: 1200px;
+      max-width: min(1600px, 100vw);
       margin: 0 auto;
       padding: 18px;
       display: grid;
@@ -145,6 +145,7 @@
     }
     @media (max-width: 980px){
       .grid{ grid-template-columns: 1fr; }
+      .doc { min-width: auto; width: 100%; }
     }
 
     .panel{
@@ -190,7 +191,7 @@
       font-size: 13px;
       outline: none;
     }
-    textarea{ min-height: 88px; resize: vertical; }
+    textarea{ min-height: 120px; resize: vertical; }
     .input:focus, select:focus, textarea:focus{ border-color: var(--border2); }
     .muted{ color: var(--muted); font-size: 12px; }
     .hr{ height:1px; background: var(--border); margin: 12px 0; }
@@ -202,7 +203,8 @@
       border-radius: var(--r);
       padding: 16px;
       overflow:auto;
-      max-height: calc(100vh - 170px);
+      max-height: calc(100vh - 100px);
+      position: relative;
     }
     .doc{
       background: #ffffff;
@@ -328,13 +330,20 @@
           <div class="form">
             <div class="row2">
               <div>
+                <label>Тип соглашения</label>
+                <select class="input" id="fAgrType">
+                  <option value="соглашению">соглашению</option>
+                  <option value="договору">договору</option>
+                </select>
+              </div>
+              <div>
                 <label>Соглашение №</label>
                 <input class="input" id="fAgrNo" placeholder="1" />
               </div>
-              <div>
-                <label>Дата соглашения</label>
-                <input class="input" id="fAgrDate" type="date" />
-              </div>
+            </div>
+            <div>
+              <label>Дата соглашения</label>
+              <input class="input" id="fAgrDate" type="date" />
             </div>
 
             <div class="row2">
@@ -350,7 +359,7 @@
 
             <div>
               <label>Препарат (полное наименование)</label>
-              <input class="input" id="fDrugFull" placeholder="Miglustat Dipharma hard capsules 100 mg №84 (4x21) ..." />
+              <textarea class="input" id="fDrugFull" placeholder="Miglustat Dipharma hard capsules 100 mg №84 (4x21) ..."></textarea>
               <div class="muted" style="margin-top:6px;">Если нужно — выбери пресет ниже и мы подставим основу.</div>
             </div>
 
@@ -359,14 +368,43 @@
                 <label>Пресет</label>
                 <select id="fPreset">
                   <option value="custom">— вручную —</option>
-                  <option value="miglustat">Миглустат</option>
-                  <option value="nitisinone">Нитизинон</option>
-                  <option value="sapropterin">Сапроптерин</option>
+                  <!-- Dynamic options will be added here by JS -->
                 </select>
               </div>
               <div>
-                <label>Производитель</label>
+                <label>Производитель (для сортировки)</label>
                 <input class="input" id="fMfg" placeholder="Алмеда / Dipharma / ..." />
+              </div>
+            </div>
+
+            <div class="hr"></div>
+
+            <div>
+              <label>Управление пресетами / Preset Editor</label>
+              <div id="presetList" style="display: grid; gap: 8px; margin-top: 8px; max-height: 300px; overflow-y: auto;"></div>
+              <div class="row2" style="margin-top: 10px;">
+                <input class="input" id="newPresetValue" placeholder="Value (e.g., newdrug)" />
+                <input class="input" id="newPresetName" placeholder="Name (e.g., New Drug)" />
+              </div>
+              <textarea class="input" id="newPresetDesc" placeholder="Description..." style="margin-top: 10px;"></textarea>
+              <div class="row2" style="margin-top:10px;">
+                <input class="input" id="newPresetMfg" placeholder="Manufacturer (e.g., B.Braun Melsungen)" />
+                <input class="input" id="newPresetCustomer" placeholder="Customer (e.g., Aziz Yusupov)" />
+              </div>
+              <div class="row2" style="margin-top:10px;">
+                <input class="input" id="newPresetAgrNo" placeholder="Agr No (e.g., 1)" />
+                <input class="input" id="newPresetAgrDate" type="date" />
+              </div>
+              <div style="margin-top:10px;">
+                <label>Agr Type</label>
+                <select class="input" id="newPresetAgrType">
+                  <option value="соглашению">соглашению</option>
+                  <option value="договору">договору</option>
+                </select>
+              </div>
+              <div class="row2" style="margin-top: 10px;">
+                <button class="btn" id="btnAddPreset">+ Add Preset</button>
+                <button class="btn danger" id="btnClearPresets">Clear All</button>
               </div>
             </div>
 
@@ -482,6 +520,7 @@
     const LIT_STORAGE_KEYS = ["litreview_monitor_master_v2","litreview_monitor_master_v1","litreview_monitor_v4_themes","litreview_monitor_v3_minimal","litreview_monitor_v2","literatureMonitoring"];
     const REPORT_KEY = "pv_report_builder_v1";
     const THEME_KEY = "pv_report_theme_v1";
+    const PRESET_KEY = "pv_presets_v1";
 
     const DEFAULT_LAW_RU = "В течение квартала изменений в законодательстве Республики Узбекистан не выявлено";
     const DEFAULT_LAW_EN = "no changes in the legislation of the Republic of Uzbekistan were detected during the quarter";
@@ -516,6 +555,7 @@
 
     let litChecks = []; // from litreview
     let reportState = {
+      agrType: "соглашению",
       agreementNo: "1",
       agreementDate: "",
       periodFrom: "",
@@ -531,9 +571,10 @@
       contactEn: "ASTOR ALLIANCE LLC",
       contactName: "Ниязова У.Х.",
       execName: "B.A.Olimjonov",
-      custName: "Ala Tocarciuc",
+      custName: "",
       cases: []
     };
+    let customPresets = [];
 
     const $ = (s) => document.querySelector(s);
 
@@ -678,20 +719,138 @@
       }
     }
 
-    function presetToDrug(preset){
-      if (preset === "miglustat"){
-        return "Miglustat Dipharma hard capsules 100 mg №84 (4x21) (blisters integrated into a cardboard envelope)";
-      }
-      if (preset === "nitisinone"){
-        return "Nitisinone (укажи форму/дозировку/упаковку здесь)";
-      }
-      if (preset === "sapropterin"){
-        return "Sapropterin (укажи форму/дозировку/упаковку здесь)";
-      }
-      return "";
+    function loadPresets() {
+      try {
+        const raw = localStorage.getItem(PRESET_KEY);
+        customPresets = raw ? JSON.parse(raw) : [
+          {value: "bbraun-propofol-lipuro-1-gb-50-ml-10", name: "Propofol Lipuro 1% GB 50 ml №10", desc: "Propofol Lipuro 1% GB 50 ml №10", mfg: "B.Braun Melsungen", customer: "Aziz Yusupov", agrNo: "2", agrDate: "2025-05-01", agrType: "соглашению"},
+          {value: "bbraun-aminoplasmal-hepa-10-500-ml-10", name: "Aminoplasmal Hepa 10% 500 ml №10", desc: "Aminoplasmal Hepa 10% 500 ml №10", mfg: "B.Braun Melsungen", customer: "Aziz Yusupov", agrNo: "2", agrDate: "2025-05-01", agrType: "соглашению"},
+          {value: "bbraun-gelofuzin-4-500-ml-10", name: "Gelofuzin 4% 500 ml №10", desc: "Gelofuzin 4% 500 ml №10", mfg: "B.Braun Melsungen", customer: "Aziz Yusupov", agrNo: "2", agrDate: "2025-05-01", agrType: "соглашению"},
+          {value: "almeda-sapropterin-dipharma-soluble-tablets-100-mg-30", name: "Sарrорtеrin Dipharma soluble tablets 100 mg №30 (vials)", desc: "Sарrорtеrin Dipharma soluble tablets 100 mg №30 (vials)", mfg: "Almeda Pharmaceuticals AG", customer: "Ala Tocarciuc", agrNo: "1", agrDate: "2025-06-17", agrType: "соглашению"},
+          {value: "almeda-nitisinone-dipharma-capsules-2-mg-5-mg-10-mg-60", name: "Nitisinone Dipharma capsules 2 mg, 5 mg, 10 mg №60 (vials)", desc: "Nitisinone Dipharma capsules 2 mg, 5 mg, 10 mg №60 (vials)", mfg: "Almeda Pharmaceuticals AG", customer: "Ala Tocarciuc", agrNo: "1", agrDate: "2025-06-17", agrType: "соглашению"},
+          {value: "almeda-miglustat-dipharma-hard-capsules-100-mg-84-4x21", name: "Miglustat Dipharma hard capsules 100 mg №84 (4x21) (blisters integrated into a cardboard envelope)", desc: "Miglustat Dipharma hard capsules 100 mg №84 (4x21) (blisters integrated into a cardboard envelope)", mfg: "Almeda Pharmaceuticals AG", customer: "Ala Tocarciuc", agrNo: "1", agrDate: "2025-06-17", agrType: "соглашению"},
+          {value: "jadran-dramina-tablets-5-1x5-10-1x10", name: "Dramina tablets № 5 (1x5), № 10 (1x10) (blister packs)", desc: "Dramina tablets № 5 (1x5), № 10 (1x10) (blister packs)", mfg: "JADRAN - GALENSKI LABORATORIJ d.d.", customer: "Mislav Vučić", agrNo: "3", agrDate: "2025-07-01", agrType: "договору"},
+          {value: "jadran-rozamet-cream-for-external-use-1-25-g-1", name: "Rozamet cream for external use, 1%, 25 g №1 (tubes)", desc: "Rozamet cream for external use, 1%, 25 g №1 (tubes)", mfg: "JADRAN - GALENSKI LABORATORIJ d.d.", customer: "Mislav Vučić", agrNo: "3", agrDate: "2025-07-01", agrType: "договору"},
+          {value: "jadran-zerkalin-solution-for-external-use-10-mgml-30-ml-1", name: "Zerkalin solution for external use 10 mg/ml, 30 ml No. 1 (vials)", desc: "Zerkalin solution for external use 10 mg/ml, 30 ml No. 1 (vials)", mfg: "JADRAN - GALENSKI LABORATORIJ d.d.", customer: "Mislav Vučić", agrNo: "3", agrDate: "2025-07-01", agrType: "договору"},
+          {value: "jadran-glaumax-plus-eye-drops-20-mgml-5-mgml-1", name: "Glaumax Plus eye drops, 20 mg/ml + 5 mg/ml No. 1 (vials)", desc: "Glaumax Plus eye drops, 20 mg/ml + 5 mg/ml No. 1 (vials)", mfg: "JADRAN - GALENSKI LABORATORIJ d.d.", customer: "Mislav Vučić", agrNo: "3", agrDate: "2025-07-01", agrType: "договору"},
+          {value: "jadran-latanox-eye-drops-0005-25-ml-1-3", name: "Latanox eye drops, 0.005%, 2.5 ml №1, № 3 (vials)", desc: "Latanox eye drops, 0.005%, 2.5 ml №1, № 3 (vials)", mfg: "JADRAN - GALENSKI LABORATORIJ d.d.", customer: "Mislav Vučić", agrNo: "3", agrDate: "2025-07-01", agrType: "договору"},
+          {value: "jadran-acnecutan-capsules-8-mg-16-mg-30-3x10", name: "Acnecutan capsules 8 mg, 16 mg No. 30 (3x10) (blister packs)", desc: "Acnecutan capsules 8 mg, 16 mg No. 30 (3x10) (blister packs)", mfg: "JADRAN - GALENSKI LABORATORIJ d.d.", customer: "Mislav Vučić", agrNo: "3", agrDate: "2025-07-01", agrType: "договору"},
+          {value: "jadran-rinomaris-advance-nasal-spray-005-01-10-ml", name: "Rinomaris Advance nasal spray 0.05%, 0.1%, 10 ml (bottles)", desc: "Rinomaris Advance nasal spray 0.05%, 0.1%, 10 ml (bottles)", mfg: "JADRAN - GALENSKI LABORATORIJ d.d.", customer: "Mislav Vučić", agrNo: "3", agrDate: "2025-07-01", agrType: "договору"},
+          {value: "biosintez-allochol-film-coated-tablets-50-5x10", name: "Allochol, film-coated tablets №50 (5×10) (blister packs)", desc: "Allochol, film-coated tablets №50 (5×10) (blister packs)", mfg: "ООО «Биосинтез»", customer: "D.V.Boldov", agrNo: "4", agrDate: "2025-09-01", agrType: "договору"},
+          {value: "biosintez-anuzol-rectal-suppositories-10-2x5", name: "Anuzol rectal suppositories №10 (2×5)", desc: "Anuzol rectal suppositories №10 (2×5)", mfg: "ООО «Биосинтез»", customer: "D.V.Boldov", agrNo: "4", agrDate: "2025-09-01", agrType: "договору"},
+          {value: "biosintez-diclofenac-rectal-suppositories-50-mg-10-2x5", name: "Diclofenac rectal suppositories 50 mg №10 (2×5)", desc: "Diclofenac rectal suppositories 50 mg №10 (2×5)", mfg: "ООО «Биосинтез»", customer: "D.V.Boldov", agrNo: "4", agrDate: "2025-09-01", agrType: "договору"},
+          {value: "biosintez-nystatin-vaginal-suppositories-250000-iu-500000-iu-10-2x5", name: "Nystatin vaginal suppositories 250,000 IU and 500,000 IU №10 (2×5)", desc: "Nystatin vaginal suppositories 250,000 IU and 500,000 IU №10 (2×5)", mfg: "ООО «Биосинтез»", customer: "D.V.Boldov", agrNo: "4", agrDate: "2025-09-01", agrType: "договору"},
+          {value: "biosintez-nystatin-film-coated-tablets-500000-iu-20-2x10", name: "Nystatin film-coated tablets, 500,000 IU №20 (2×10) (blister packs)", desc: "Nystatin film-coated tablets, 500,000 IU №20 (2×10) (blister packs)", mfg: "ООО «Биосинтез»", customer: "D.V.Boldov", agrNo: "4", agrDate: "2025-09-01", agrType: "договору"},
+          {value: "biosintez-oksolin-nasal-ointment-025-10-g", name: "Oksolin nasal ointment 0.25%, 10 g", desc: "Oksolin nasal ointment 0.25%, 10 g", mfg: "ООО «Биосинтез»", customer: "D.V.Boldov", agrNo: "4", agrDate: "2025-09-01", agrType: "договору"},
+          {value: "biosintez-papaverine-hydrochloride-rectal-suppositories-20-mg-10-2x5", name: "Papaverine hydrochloride rectal suppositories 20 mg №10 (2×5)", desc: "Papaverine hydrochloride rectal suppositories 20 mg №10 (2×5)", mfg: "ООО «Биосинтез»", customer: "D.V.Boldov", agrNo: "4", agrDate: "2025-09-01", agrType: "договору"},
+          {value: "biosintez-tetracycline-film-coated-tablets-100-mg-20-2x10", name: "Tetracycline film-coated tablets, 100 mg №20 (2×10)", desc: "Tetracycline film-coated tablets, 100 mg №20 (2×10)", mfg: "ООО «Биосинтез»", customer: "D.V.Boldov", agrNo: "4", agrDate: "2025-09-01", agrType: "договору"},
+          {value: "biosintez-cefazolin-powder-for-solution-10-g-1-50-pcs", name: "Cefazolin powder for solution for intravenous and intramuscular administration 1.0 g №1, 50 pcs.", desc: "Cefazolin powder for solution for intravenous and intramuscular administration 1.0 g №1, 50 pcs.", mfg: "ООО «Биосинтез»", customer: "D.V.Boldov", agrNo: "4", agrDate: "2025-09-01", agrType: "договору"},
+          {value: "biosintez-ceftriaxone-powder-for-solution-10-g-1-50-pcs", name: "Ceftriaxone powder for solution for intravenous and intramuscular administration 1.0 g №1, 50 pcs.", desc: "Ceftriaxone powder for solution for intravenous and intramuscular administration 1.0 g №1, 50 pcs.", mfg: "ООО «Биосинтез»", customer: "D.V.Boldov", agrNo: "4", agrDate: "2025-09-01", agrType: "договору"},
+          {value: "biosintez-pancreatin-forte-enteric-film-coated-tablets-20-2x10", name: "Pancreatin forte enteric film-coated tablets №20 (2×10)", desc: "Pancreatin forte enteric film-coated tablets №20 (2×10)", mfg: "ООО «Биосинтез»", customer: "D.V.Boldov", agrNo: "4", agrDate: "2025-09-01", agrType: "договору"}
+        ];
+      } catch(e) { customPresets = []; }
+      renderPresets();
+    }
+
+    function savePresets() {
+      try { localStorage.setItem(PRESET_KEY, JSON.stringify(customPresets)); } catch(e) {}
+    }
+
+    function renderPresets() {
+      const select = $("#fPreset");
+      let html = '<option value="custom">— вручную —</option>';
+      let groups = {};
+      customPresets.forEach(p => {
+        let m = p.mfg || 'Other';
+        if (!groups[m]) groups[m] = [];
+        groups[m].push(p);
+      });
+      Object.keys(groups).sort().forEach(m => {
+        html += `<optgroup label="${escapeHtml(m)}">`;
+        groups[m].sort((a, b) => a.name.localeCompare(b.name)).forEach(p => {
+          html += `<option value="${escapeHtml(p.value)}">${escapeHtml(p.name)}</option>`;
+        });
+        html += '</optgroup>';
+      });
+      select.innerHTML = html;
+      select.value = reportState.preset || "custom";
+
+      const list = $("#presetList");
+      list.innerHTML = customPresets.map((p, idx) => `
+        <div style="display: flex; gap: 8px; align-items: center; background: var(--panel2); padding: 8px; border-radius: 8px;">
+          <span>${escapeHtml(p.name)} (${escapeHtml(p.value)}): ${escapeHtml(p.desc.slice(0,50)) + (p.desc.length > 50 ? '...' : '')} | Mfg: ${escapeHtml(p.mfg)} | Customer: ${escapeHtml(p.customer)} | Agr: ${escapeHtml(p.agrType)} №${escapeHtml(p.agrNo)} from ${p.agrDate}</span>
+          <button class="btn ghost small" onclick="editPreset(${idx})">Edit</button>
+          <button class="btn danger ghost small" onclick="deletePreset(${idx})">Delete</button>
+        </div>
+      `).join("");
+    }
+
+    function addPreset() {
+      const value = $("#newPresetValue").value.trim();
+      const name = $("#newPresetName").value.trim();
+      const desc = $("#newPresetDesc").value.trim();
+      const mfg = $("#newPresetMfg").value.trim();
+      const customer = $("#newPresetCustomer").value.trim();
+      const agrNo = $("#newPresetAgrNo").value.trim();
+      const agrDate = $("#newPresetAgrDate").value;
+      const agrType = $("#newPresetAgrType").value;
+      if (!value || !name || !desc) return toast("Fill all fields", "warn");
+      if (customPresets.some(p => p.value === value)) return toast("Duplicate value", "bad");
+      customPresets.push({value, name, desc, mfg, customer, agrNo, agrDate, agrType});
+      savePresets();
+      renderPresets();
+      clearPresetInputs();
+      toast("Preset added ✓", "ok");
+      render(); // Update drug if selected
+    }
+
+    function editPreset(idx) {
+      const p = customPresets[idx];
+      if (!p) return;
+      $("#newPresetValue").value = p.value;
+      $("#newPresetName").value = p.name;
+      $("#newPresetDesc").value = p.desc;
+      $("#newPresetMfg").value = p.mfg;
+      $("#newPresetCustomer").value = p.customer;
+      $("#newPresetAgrNo").value = p.agrNo;
+      $("#newPresetAgrDate").value = p.agrDate;
+      $("#newPresetAgrType").value = p.agrType;
+      deletePreset(idx);
+      toast("Fields filled for edit. Update and add.", "warn");
+    }
+
+    function deletePreset(idx) {
+      customPresets.splice(idx, 1);
+      savePresets();
+      renderPresets();
+      toast("Preset deleted", "warn");
+    }
+
+    function clearPresetInputs() {
+      $("#newPresetValue").value = "";
+      $("#newPresetName").value = "";
+      $("#newPresetDesc").value = "";
+      $("#newPresetMfg").value = "";
+      $("#newPresetCustomer").value = "";
+      $("#newPresetAgrNo").value = "";
+      $("#newPresetAgrDate").value = "";
+      $("#newPresetAgrType").value = "соглашению";
+    }
+
+    function clearAllPresets() {
+      customPresets = [];
+      savePresets();
+      renderPresets();
+      toast("All presets cleared", "warn");
+    }
+
+    function presetToDrug(preset) {
+      const found = customPresets.find(p => p.value === preset);
+      return found ? found.desc : "";
     }
 
     function bindForm(){
+      $("#fAgrType").value = reportState.agrType || "соглашению";
       $("#fAgrNo").value = reportState.agreementNo || "";
       $("#fAgrDate").value = reportState.agreementDate || "";
       $("#fFrom").value = reportState.periodFrom || "";
@@ -711,6 +870,7 @@
     }
 
     function syncStateFromForm(){
+      reportState.agrType = $("#fAgrType").value || "соглашению";
       reportState.agreementNo = ($("#fAgrNo").value || "").trim();
       reportState.agreementDate = $("#fAgrDate").value || "";
       reportState.periodFrom = $("#fFrom").value || "";
@@ -774,12 +934,12 @@
     }
 
     function docHtml(){
+      const agrType = reportState.agrType || "соглашению";
       const agrNo = reportState.agreementNo || "—";
       const agrDate = reportState.agreementDate ? formatDateRU(reportState.agreementDate) : "—";
       const from = reportState.periodFrom ? formatDateRU(reportState.periodFrom) : "—";
       const to = reportState.periodTo ? formatDateRU(reportState.periodTo) : "—";
       const drug = reportState.drugFull || "—";
-      const mfg = reportState.manufacturer ? ` (${reportState.manufacturer})` : "";
 
       const cases = Array.isArray(reportState.cases) ? reportState.cases : [];
       const caseRows = cases.length ? cases : [{ num: "1", date: "", source: "", desc: "", outcome: "", conclusion: "" }];
@@ -791,14 +951,14 @@
 
       return `
         <div class="doc" id="docRoot">
-          <div class="title">Отчет по соглашению&nbsp;&nbsp; № ${escapeHtml(agrNo)}&nbsp; от ${escapeHtml(agrDate)} года</div>
-          <div class="mt8">Report on agreement&nbsp;&nbsp;&nbsp;&nbsp; No.&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; dated</div>
+          <div class="center title">Отчет по ${escapeHtml(agrType)} № ${escapeHtml(agrNo)} от ${escapeHtml(agrDate)} года</div>
+          <div class="center mt8">Report on agreement No. dated</div>
 
-          <div class="mt12 center">за период с ${escapeHtml(from)} по ${escapeHtml(to)} года</div>
-          <div class="center small">for the period&nbsp;&nbsp; from&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; to</div>
+          <div class="mt12" style="text-align: center;">за период с ${escapeHtml(from)} по ${escapeHtml(to)} года</div>
+          <div class="small" style="text-align: center;">for the period from to</div>
 
           <div class="mt12">
-            о проделанной работе по Фармаконадзору по препарату ${escapeHtml(drug)}${escapeHtml(mfg)}
+            о проделанной работе по Фармаконадзору по препарату ${escapeHtml(drug)}
           </div>
           <div class="mt8">on the work done on Pharmacovigilance for the drug</div>
 
@@ -814,7 +974,7 @@
                 <th>Описание сообщения<br/><span class="small">Report description</span></th>
                 <th style="width:12%;">Исход<br/><span class="small">Outcome</span></th>
                 <th>Заключение (включая анализ возможных причин возникновения и оценку причинно-следственной связи)<br/>
-                    <span class="small">Conclusion (including analysis of possible causes of occurrence and assessment of cause-and-effect relationship)</span></th>
+                    <span class="small">Conclusion (including analysis of possible causes of occurrence and assessment of cause-and-effect relationship</span></th>
               </tr>
             </thead>
             <tbody>
@@ -842,7 +1002,7 @@
           <div class="mt12">
             Приложение: копии форм регистрации НР/НЯ/ОС в количестве __${escapeHtml(casesCount)}_ случаев на __${escapeHtml(sheetsCount)}__ листах.
           </div>
-          <div class="mt8">Attachment: copies of AR/AE/SS registration forms&nbsp;&nbsp; in the number of&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; cases on&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; sheets.</div>
+          <div class="mt8">Attachment: copies of AR/AE/SS registration forms in the number of cases on sheets.</div>
 
           <div class="mt16 title">Прочее</div>
           <div class="mt8">Miscellaneous</div>
@@ -874,8 +1034,8 @@
           <div class="mt8">${escapeHtml(reportState.lawRu || DEFAULT_LAW_RU)}</div>
           <div class="mt8">${escapeHtml(reportState.lawEn || DEFAULT_LAW_EN)}</div>
 
-          <div class="mt16 title">Контактное лицо по фармаконадзору ${escapeHtml(reportState.contactRu || "")}</div>
-          <div class="mt8">Contact person for pharmacovigilance of ${escapeHtml(reportState.contactEn || "")}&nbsp;&nbsp;&nbsp; ${escapeHtml(reportState.contactName || "")}&nbsp; /____________</div>
+          <div class="mt16 title">Контактное лицо по фармаконадзору ${escapeHtml(reportState.contactRu || "ООО «ASTOR ALLIANCE»")}</div>
+          <div class="mt8">Contact person for pharmacovigilance of ${escapeHtml(reportState.contactEn || "ASTOR ALLIANCE LLC")}&nbsp;&nbsp;&nbsp; ${escapeHtml(reportState.contactName || "Ниязова У.Х.")} /____________</div>
 
           <div class="mt16 title">ПОДПИСИ СТОРОН:</div>
           <div class="mt8 title">SIGNATURES OF THE PARTIES:</div>
@@ -886,7 +1046,7 @@
               <td style="width:50%; font-weight:700;">От ЗАКАЗЧИКА<br/><span class="small">FROM THE CUSTOMER</span></td>
             </tr>
             <tr>
-              <td> _______________/${escapeHtml(reportState.execName || "")} /</td>
+              <td> _______________/${escapeHtml(reportState.execName || "B.A.Olimjonov")} /</td>
               <td> _________________/${escapeHtml(reportState.custName || "")} /</td>
             </tr>
           </table>
@@ -897,17 +1057,6 @@
 
     function render(){
       syncStateFromForm();
-
-      const p = reportState.preset;
-      if (p !== "custom"){
-        const base = presetToDrug(p);
-        if (base && (!reportState.drugFull || reportState.drugFull.trim()==="" || reportState.drugFull.includes("укажи форму"))){
-          reportState.drugFull = base;
-          $("#fDrugFull").value = reportState.drugFull;
-          saveReport();
-        }
-      }
-
       $("#previewHost").innerHTML = docHtml();
       $("#printArea").innerHTML = docHtml();
     }
@@ -955,7 +1104,17 @@
 
     function exportWord(){
       render();
-      const content = document.getElementById("docRoot").outerHTML;
+      const root = document.getElementById("docRoot");
+
+      // Добавляем <b> теги для надёжного жирного шрифта в Word
+      const boldTitles = root.querySelectorAll('.title');
+      boldTitles.forEach(el => {
+        if (!el.closest('b')) {
+          el.innerHTML = '<b>' + el.innerHTML + '</b>';
+        }
+      });
+
+      const content = root.outerHTML;
 
       const wordHtml = `
 <!DOCTYPE html>
@@ -964,18 +1123,20 @@
 <meta charset="UTF-8">
 <title>PV Report</title>
 <style>
-  body{ font-family: Calibri, Arial, sans-serif; font-size: 12pt; line-height: 1.25; }
-  table{ width:100%; border-collapse:collapse; margin-top:8px; font-size:10.5pt; }
-  td, th{ border:1px solid #000; padding:6px 6px; vertical-align:top; }
+  @page { size: A4; margin: 1.5cm 1.5cm 1.5cm 1.5cm; }
+  body{ font-family: "Times New Roman", Times, serif; font-size: 11pt; line-height: 1.15; margin: 0; padding: 0; }
+  table{ width:100%; border-collapse:collapse; margin-top:4px; font-size:9pt; }
+  td, th{ border:1px solid #000; padding:4px; vertical-align:top; }
   th{ font-weight:700; text-align:center; }
-  .title{ font-weight:700; }
-  .small{ font-size:10pt; }
+  b{ font-weight: bold; }
   .center{ text-align:center; }
+  .mt4{ margin-top:4px; }
   .mt8{ margin-top:8px; }
   .mt12{ margin-top:12px; }
   .mt16{ margin-top:16px; }
+  .small{ font-size:9pt; }
   .noborder td{ border:0; padding:0; }
-  .sign td{ border:0; padding:6px 0; }
+  .sign td{ border:0; padding:4px 0; }
 </style>
 </head>
 <body>
@@ -1083,7 +1244,10 @@ ${content}
         if (!id) return;
         if (id.startsWith("f")) render();
       });
-      $("#fPreset").addEventListener("change", () => render());
+      $("#fPreset").addEventListener("change", () => {
+        onChangePreset();
+        render();
+      });
 
       $("#btnTheme").addEventListener("click", () => {
         const now = document.documentElement.getAttribute("data-theme") || "strict";
@@ -1111,6 +1275,28 @@ ${content}
       $("#caseCancel").addEventListener("click", closeCaseDlg);
       $("#caseSave").addEventListener("click", saveCaseFromDlg);
 
+      $("#btnAddPreset").addEventListener("click", addPreset);
+      $("#btnClearPresets").addEventListener("click", clearAllPresets);
+
+      // Zoom feature
+      const zoomLevels = [0.5, 0.75, 1, 1.25, 1.5];
+      let currentZoom = 2; // 1x
+      const zoomBtn = document.createElement('button');
+      zoomBtn.className = 'btn';
+      zoomBtn.textContent = 'Zoom: 100%';
+      zoomBtn.addEventListener('click', () => {
+        currentZoom = (currentZoom + 1) % zoomLevels.length;
+        const scale = zoomLevels[currentZoom];
+        const docEl = document.querySelector('#previewHost .doc');
+        if (docEl) {
+          docEl.style.transform = `scale(${scale})`;
+          docEl.style.transformOrigin = 'top left';
+        }
+        zoomBtn.textContent = `Zoom: ${scale * 100}%`;
+        toast(`Zoom set to ${scale * 100}%`, "ok");
+      });
+      $('.preview').insertBefore(zoomBtn, $('.preview').firstChild);
+
       const today = new Date();
       const y = today.getFullYear();
       const m = today.getMonth();
@@ -1137,14 +1323,41 @@ ${content}
       if (!reportState.lawRu) reportState.lawRu = DEFAULT_LAW_RU;
       if (!reportState.lawEn) reportState.lawEn = DEFAULT_LAW_EN;
 
+      loadPresets();
       bindForm();
       setDataPill();
       render();
     }
 
+    function onChangePreset() {
+      const p = reportState.preset = $("#fPreset").value;
+      if (p !== "custom"){
+        const selectedPreset = customPresets.find(pp => pp.value === p);
+        if (selectedPreset) {
+          reportState.drugFull = selectedPreset.desc;
+          $("#fDrugFull").value = reportState.drugFull;
+          reportState.custName = selectedPreset.customer;
+          $("#fCustName").value = reportState.custName;
+          reportState.agreementNo = selectedPreset.agrNo;
+          $("#fAgrNo").value = reportState.agreementNo;
+          reportState.agreementDate = selectedPreset.agrDate;
+          $("#fAgrDate").value = reportState.agreementDate;
+          reportState.manufacturer = selectedPreset.mfg;
+          $("#fMfg").value = reportState.manufacturer;
+          reportState.agrType = selectedPreset.agrType;
+          $("#fAgrType").value = reportState.agrType;
+          saveReport();
+        }
+      } else {
+        // For custom, do not overwrite
+      }
+    }
+
     applyTheme(loadTheme());
     loadReport();
     window.addEventListener("DOMContentLoaded", wire);
+    window.editPreset = editPreset;
+    window.deletePreset = deletePreset;
   </script>
 </body>
 </html>
