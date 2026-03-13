@@ -614,8 +614,18 @@
             <button class="menuItem" id="miDownloadJson" role="menuitem">
               <span>Скачать базу</span><span class="hint">json</span>
             </button>
+            <div class="menuSep"></div>
+            <button class="menuItem" id="miImportJson" role="menuitem">
+              <span>Импорт из файла</span><span class="hint">json</span>
+            </button>
+            <button class="menuItem" id="miImportGithub" role="menuitem">
+              <span>Загрузить с GitHub</span><span class="hint">json</span>
+            </button>
           </div>
         </div>
+
+        <!-- Hidden file input for JSON import -->
+        <input type="file" id="importFileInput" accept=".json,application/json" class="hidden" />
 
         <button class="btn danger" id="btnWipe" title="Удалить все локальные данные">Очистить</button>
 
@@ -833,7 +843,7 @@
   {
     "id": 1,
     "name": "Medical Express",
-    "url": "http://www.medicalexpress.uz/"
+    "url": "https://www.medicalexpress.uz/journals/"
   },
   {
     "id": 2,
@@ -888,7 +898,7 @@
   {
     "id": 12,
     "name": "Журнал кардиореспираторных исследований",
-    "url": "https://tadqiqot.uz/index.php/cardio/issue/archive"
+    "url": "https://www.sammu.uz/ru/journals/5"
   },
   {
     "id": 13,
@@ -898,7 +908,7 @@
   {
     "id": 14,
     "name": "Журнал репродуктивного здоровья и уро-нефрологических исследований",
-    "url": "https://tadqiqot.uz/index.php/uro/issue/archive"
+    "url": "https://www.sammu.uz/ru/journals/7"
   },
   {
     "id": 15,
@@ -953,7 +963,7 @@
   {
     "id": 25,
     "name": "Универсальный международный научный журнал",
-    "url": "https://universaljournal.uz/index.php/jurnal/index"
+    "url": "https://universaljurnal.uz/index.php/jurnal"
   }
 ];
 
@@ -1790,68 +1800,70 @@
       return exportWeekCsv();
     }
 
-    function exportAllXlsx(){
-      const wb = XLSX.utils.book_new();
+    async function exportAllXlsx(){
+  const okX = await ensureXlsx();
+  if (!okX) return exportAllCsv();
 
-      const rows = stableSortChecks(checks).map(c => {
-        const s = sourcesById.get(c.sourceId);
-        return {
-          "ID источника": c.sourceId,
-          "Источник": s ? s.name : "",
-          "URL": s ? (s.url || "") : "",
-          "Дата": formatDateRU(c.date),
-          "Время": c.time || "",
-          "Статус": c.status || "",
-          "Номер выпуска": c.issueNumber || "",
-          "НЯ": c.nyDetected || "",
-          "Автор и название статьи": c.articleInfo || "",
-          "Препарат": c.drugName || "",
-          "Результат": c.result || "",
-          "Дата PV-Hub": c.pvHubDate || "",
-          "Ответственный": c.responsible || "",
-          "Комментарий": c.note || "",
-          "Создано (timestamp)": c.createdAt || ""
-        };
-      });
+  const wb = XLSX.utils.book_new();
 
-      const ws = XLSX.utils.json_to_sheet(rows, { skipHeader: false });
-      ws["!cols"] = [
-        { wch: 12 }, { wch: 44 }, { wch: 32 }, { wch: 12 }, { wch: 8 },
-        { wch: 14 }, { wch: 18 }, { wch: 6 }, { wch: 44 }, { wch: 20 },
-        { wch: 20 }, { wch: 16 }, { wch: 20 }, { wch: 26 }, { wch: 18 }
-      ];
-      const range = XLSX.utils.decode_range(ws["!ref"] || "A1:A1");
-      ws["!autofilter"] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: 0, c: range.e.c } }) };
-      ws["!freeze"] = { xSplit: 0, ySplit: 1 };
-      XLSX.utils.book_append_sheet(wb, ws, "Проверки");
+  const rows = stableSortChecks(checks).map(c => {
+    const s = sourcesById.get(c.sourceId);
+    return {
+      "ID записи": c.id || "",
+      "ID источника": c.sourceId,
+      "Источник": s ? s.name : "",
+      "URL": s ? (s.url || "") : "",
+      "Дата": formatDateRU(c.date),
+      "Дата ISO": new Date(c.date).toISOString().split("T")[0],
+      "Время": c.time || "",
+      "Статус": c.status || "",
+      "Номер выпуска": c.issueNumber || "",
+      "НЯ": c.nyDetected || "",
+      "Автор и название статьи": c.articleInfo || "",
+      "Препарат": c.drugName || "",
+      "Результат": c.result || "",
+      "Дата PV-Hub": c.pvHubDate || "",
+      "Ответственный": c.responsible || "",
+      "Комментарий": c.note || "",
+      "createdAt epoch": c.createdAt || "",
+      "createdAt ISO": c.createdAt ? new Date(c.createdAt).toISOString() : ""
+    };
+  });
 
-      const summary = sources.map(s => {
-        const w = weekChecks(s.id);
-        const last = lastCheck(s.id);
-        const hasNew = w.some(x => x.status === "Новый выпуск");
-        return {
-          "ID источника": s.id,
-          "Источник": s.name,
-          "URL": s.url || "",
-          "Проверок за 7 дней": w.length,
-          "Новый выпуск за 7 дней": hasNew ? "Да" : "Нет",
-          "Последняя проверка (дата)": last ? formatDateRU(last.date) : "",
-          "Последняя проверка (время)": last ? (last.time || "") : "",
-          "Последний статус": last ? (last.status || "") : "",
-          "Последний выпуск": last ? (last.issueNumber || "") : ""
-        };
-      });
-      const ws2 = XLSX.utils.json_to_sheet(summary, { skipHeader: false });
-      ws2["!cols"] = [{wch:12},{wch:48},{wch:34},{wch:18},{wch:22},{wch:22},{wch:18},{wch:16},{wch:20}];
-      const r2 = XLSX.utils.decode_range(ws2["!ref"] || "A1:A1");
-      ws2["!autofilter"] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: 0, c: r2.e.c } }) };
-      ws2["!freeze"] = { xSplit: 0, ySplit: 1 };
-      XLSX.utils.book_append_sheet(wb, ws2, "Сводка");
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws["!freeze"] = { ySplit: 1 };
+  XLSX.utils.book_append_sheet(wb, ws, "Все_проверки");
 
-      const filename = `litreview_all_${isoToday()}.xlsx`;
-      XLSX.writeFile(wb, filename);
-      toast(`Готово: ${filename}`, "ok");
-    }
+  const exportedAt = new Date().toISOString();
+  const hashPayload = JSON.stringify({
+    exportedAt,
+    total: rows.length,
+    ids: rows.map(r => r["ID записи"])
+  });
+
+  const dataHash = await sha256hex(hashPayload);
+
+  const audit = [
+    { Key: "exportedAt", Value: exportedAt },
+    { Key: "total_records", Value: rows.length },
+    { Key: "sha256", Value: dataHash },
+    { Key: "app_version", Value: "litreview_monitor_v4" }
+  ];
+
+  const wsAudit = XLSX.utils.json_to_sheet(audit);
+  XLSX.utils.book_append_sheet(wb, wsAudit, "Audit");
+
+  wb.Props = {
+    Title: "Full Literature Monitoring Export",
+    Author: "litreview-monitor",
+    CreatedDate: new Date(exportedAt)
+  };
+
+  const filename = `litreview_full_${exportedAt.slice(0,10)}.xlsx`;
+  XLSX.writeFile(wb, filename);
+  toast(`Готово: ${filename}`, "ok");
+}
+
 
     function exportAllCsv(){
       const rows = stableSortChecks(checks).map(c => {
@@ -1880,60 +1892,147 @@
       toast(`XLSX не найден — выгружен CSV: ${filename}`, "warn");
     }
 
-    function exportWeekXlsx(){
-      const wb = XLSX.utils.book_new();
-      const { start, end } = weekWindowDays();
+    async function sha256hex(str){
+  const buf = new TextEncoder().encode(str);
+  const hashBuf = await crypto.subtle.digest('SHA-256', buf);
+  return Array.from(new Uint8Array(hashBuf))
+    .map(b => b.toString(16).padStart(2,'0')).join('');
+}
 
-      const inWeek = stableSortChecks(checks.filter(c => isInLast7Days(c.date))).map(c => {
-        const s = sourcesById.get(c.sourceId);
-        return {
-          "ID источника": c.sourceId,
-          "Источник": s ? s.name : "",
-          "Дата": formatDateRU(c.date),
-          "Время": c.time || "",
-          "Статус": c.status || "",
-          "Номер выпуска": c.issueNumber || "",
-          "НЯ": c.nyDetected || "",
-          "Автор и название статьи": c.articleInfo || "",
-          "Препарат": c.drugName || "",
-          "Результат": c.result || "",
-          "Дата PV-Hub": c.pvHubDate || "",
-          "Ответственный": c.responsible || "",
-          "Комментарий": c.note || ""
-        };
-      });
+async function exportWeekXlsx(){
+  const okX = await ensureXlsx();
+  if (!okX) return exportWeekCsv();
 
-      const ws = XLSX.utils.json_to_sheet(inWeek, { skipHeader: false });
-      ws["!cols"] = [{wch:12},{wch:48},{wch:12},{wch:8},{wch:14},{wch:18},{wch:6},{wch:44},{wch:20},{wch:20},{wch:16},{wch:20},{wch:26}];
-      const range = XLSX.utils.decode_range(ws["!ref"] || "A1:A1");
-      ws["!autofilter"] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: 0, c: range.e.c } }) };
-      ws["!freeze"] = { xSplit: 0, ySplit: 1 };
-      XLSX.utils.book_append_sheet(wb, ws, "Проверки_неделя");
+  const wb = XLSX.utils.book_new();
+  const { start, end } = weekWindowDays();
 
-      const coverage = sources.map(s => {
-        const w = weekChecks(s.id);
-        const hasNew = w.some(x => x.status === "Новый выпуск");
-        return {
-          "ID источника": s.id,
-          "Источник": s.name,
-          "Проверок за неделю": w.length,
-          "Новый выпуск": hasNew ? "Да" : "Нет",
-          "Статус покрытия": w.length ? "Проверено" : "Не проверялся",
-          "Примечание": w.length ? "" : "Не проверялся на этой неделе"
-        };
-      });
-      const ws2 = XLSX.utils.json_to_sheet(coverage, { skipHeader: false });
-      ws2["!cols"] = [{wch:12},{wch:52},{wch:18},{wch:14},{wch:18},{wch:30}];
-      const r2 = XLSX.utils.decode_range(ws2["!ref"] || "A1:A1");
-      ws2["!autofilter"] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: 0, c: r2.e.c } }) };
-      ws2["!freeze"] = { xSplit: 0, ySplit: 1 };
-      XLSX.utils.book_append_sheet(wb, ws2, "Покрытие");
+  const inWeek = stableSortChecks(checks.filter(c => isInLast7Days(c.date))).map(c => {
+    const s = sourcesById.get(c.sourceId);
+    return {
+      "ID записи": c.id || "",
+      "ID источника": c.sourceId,
+      "Источник": s ? s.name : "",
+      "URL": s ? (s.url || "") : "",
+      "Дата": formatDateRU(c.date),
+      "Дата ISO": new Date(c.date).toISOString().split("T")[0],
+      "Время": c.time || "",
+      "Статус": c.status || "",
+      "Номер выпуска": c.issueNumber || "",
+      "НЯ": c.nyDetected || "",
+      "Автор и название статьи": c.articleInfo || "",
+      "Препарат": c.drugName || "",
+      "Результат": c.result || "",
+      "Дата PV-Hub": c.pvHubDate || "",
+      "Ответственный": c.responsible || "",
+      "Комментарий": c.note || "",
+      "createdAt epoch": c.createdAt || "",
+      "createdAt ISO": c.createdAt ? new Date(c.createdAt).toISOString() : ""
+    };
+  });
 
-      const s = `${pad2(start.getDate())}${pad2(start.getMonth()+1)}${start.getFullYear()}`;
-      const e = `${pad2(end.getDate())}${pad2(end.getMonth()+1)}${end.getFullYear()}`;
-      const filename = `litreview_week_${s}-${e}.xlsx`;
-      XLSX.writeFile(wb, filename);
-      toast(`Готово: ${filename}`, "ok");
+  const ws = XLSX.utils.json_to_sheet(inWeek);
+  ws["!freeze"] = { ySplit: 1 };
+  XLSX.utils.book_append_sheet(wb, ws, "Проверки_неделя");
+
+  const exportedAt = new Date().toISOString();
+  const hashPayload = JSON.stringify({
+    exportedAt,
+    start: start.toISOString(),
+    end: end.toISOString(),
+    ids: inWeek.map(r => r["ID записи"])
+  });
+
+  const dataHash = await sha256hex(hashPayload);
+
+  const audit = [
+    { Key: "exportedAt", Value: exportedAt },
+    { Key: "period_start", Value: start.toISOString() },
+    { Key: "period_end", Value: end.toISOString() },
+    { Key: "records", Value: inWeek.length },
+    { Key: "sha256", Value: dataHash },
+    { Key: "app_version", Value: "litreview_monitor_v4" }
+  ];
+
+  const wsAudit = XLSX.utils.json_to_sheet(audit);
+  XLSX.utils.book_append_sheet(wb, wsAudit, "Audit");
+
+  wb.Props = {
+    Title: "Weekly Literature Monitoring",
+    Author: "litreview-monitor",
+    CreatedDate: new Date(exportedAt)
+  };
+
+  const s = `${start.getFullYear()}${pad2(start.getMonth()+1)}${pad2(start.getDate())}`;
+  const e = `${end.getFullYear()}${pad2(end.getMonth()+1)}${pad2(end.getDate())}`;
+  const filename = `litreview_week_${s}_to_${e}.xlsx`;
+
+  XLSX.writeFile(wb, filename);
+  toast(`Готово: ${filename}`, "ok");
+}
+
+    // ------------------------------------------------------------
+    // Import from JSON file
+    // ------------------------------------------------------------
+    function importFromJSON(jsonData){
+      try {
+        const parsed = JSON.parse(jsonData);
+        if (!parsed || !Array.isArray(parsed.checks)){
+          toast("Не удалось распознать файл: нет массива checks.", "bad");
+          return;
+        }
+        const incoming = parsed.checks;
+        const existingIds = new Set(checks.map(c => c.id).filter(Boolean));
+        let added = 0;
+        for (const c of incoming){
+          if (c.id && existingIds.has(c.id)) continue; // skip duplicates
+          checks.push(c);
+          if (c.id) existingIds.add(c.id);
+          added++;
+        }
+        save(true);
+        syncViews();
+        toast(`Импорт завершён: добавлено ${added} записей (дубли пропущены).`, "ok");
+      } catch(e){
+        console.error(e);
+        toast("Ошибка разбора JSON: " + e.message, "bad");
+      }
+    }
+
+    function triggerImportFile(){
+      $("#importFileInput").value = "";
+      $("#importFileInput").click();
+    }
+
+    // ------------------------------------------------------------
+    // Import from GitHub raw URL
+    // ------------------------------------------------------------
+    const GITHUB_RAW_KEY = "litreview_github_raw_url";
+
+    async function importFromGithub(){
+      let url = "";
+      try { url = localStorage.getItem(GITHUB_RAW_KEY) || ""; } catch(e){}
+
+      const input = prompt(
+        "Вставь Raw-ссылку на litreview_backup.json в GitHub\n" +
+        "(напр.: https://raw.githubusercontent.com/ВАШ_ЛОГИН/ВАШ_РЕПО/main/litreview_backup.json)",
+        url
+      );
+      if (!input || !input.trim()) return;
+
+      const rawUrl = input.trim();
+      try { localStorage.setItem(GITHUB_RAW_KEY, rawUrl); } catch(e){}
+
+      toast("Загружаю с GitHub…", "info");
+      try {
+        const resp = await fetch(rawUrl + "?_=" + Date.now()); // cache-bust
+        if (!resp.ok) throw new Error(`HTTP ${resp.status} ${resp.statusText}`);
+        const text = await resp.text();
+        importFromJSON(text);
+      } catch(e){
+        console.error(e);
+        toast("Не удалось загрузить файл: " + e.message +
+          ". Убедись, что репозиторий публичный и ссылка — raw-формат.", "bad");
+      }
     }
 
     function exportWeekCsv(){
@@ -1998,6 +2097,15 @@
       $("#miExportAll").addEventListener("click", () => { exportAll(); exportMenuCtl?.menu?.classList.remove("open"); });
       $("#miExportWeek").addEventListener("click", () => { exportWeek(); exportMenuCtl?.menu?.classList.remove("open"); });
       $("#miDownloadJson").addEventListener("click", () => { downloadBackupJSON(); exportMenuCtl?.menu?.classList.remove("open"); });
+      $("#miImportJson").addEventListener("click", () => { triggerImportFile(); exportMenuCtl?.menu?.classList.remove("open"); });
+      $("#miImportGithub").addEventListener("click", () => { importFromGithub(); exportMenuCtl?.menu?.classList.remove("open"); });
+      $("#importFileInput").addEventListener("change", (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => importFromJSON(ev.target.result);
+        reader.readAsText(file, "utf-8");
+      });
 
       $("#filterSelect").addEventListener("change", () => { renderSources(); renderLog(); renderStats(); });
       $("#searchInput").addEventListener("input", () => { renderSources(); renderLog(); });
