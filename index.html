@@ -621,13 +621,17 @@
             <button class="menuItem" id="miImportGithub" role="menuitem">
               <span>Загрузить с GitHub</span><span class="hint">json</span>
             </button>
+            <div class="menuSep"></div>
+            <button class="menuItem" id="miWipe" role="menuitem" style="color: color-mix(in srgb, var(--text) 55%, transparent);">
+              <span>Очистить все данные</span><span class="hint">⚠︎</span>
+            </button>
           </div>
         </div>
 
         <!-- Hidden file input for JSON import -->
         <input type="file" id="importFileInput" accept=".json,application/json" class="hidden" />
 
-        <button class="btn danger" id="btnWipe" title="Удалить все локальные данные">Очистить</button>
+        
 
         <span class="spacer"></span>
 
@@ -1013,9 +1017,10 @@
     }
     function weekWindowDays(){
       const end = new Date();
-      end.setHours(0,0,0,0);
+      end.setHours(23,59,59,999); // include full today
       const start = new Date(end);
       start.setDate(start.getDate() - 6);
+      start.setHours(0,0,0,0);
       return { start, end };
     }
     function isInLast7Days(isoDate){
@@ -1283,7 +1288,10 @@
           <div class="hist-item">
             <div class="hist-top">
               <div style="font-weight: 920;">${escapeHtml(formatDateRU(c.date))} · ${escapeHtml(c.time || "—")}</div>
-              <span class="tag ${tag}">${c.status === "Новый выпуск" ? "Новый выпуск" : "Проверено"}</span>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <span class="tag ${tag}">${c.status === "Новый выпуск" ? "Новый выпуск" : "Проверено"}</span>
+                <button class="btn small ghost" data-action="delete-check" data-check-id="${escapeHtml(c.id || "")}" title="Удалить запись" style="padding:4px 8px;font-size:12px;opacity:.55;">✕</button>
+              </div>
             </div>
             <div class="hist-grid">
               <div class="kv"><div class="k">Номер выпуска</div><div class="v">${escapeHtml(c.issueNumber || "—")}</div></div>
@@ -1622,14 +1630,26 @@
       toast("Запись сохранена", "ok");
     }
 
+    function deleteCheck(checkId){
+      if (!checkId) return;
+      const idx = checks.findIndex(c => c.id === checkId);
+      if (idx === -1) { toast("Запись не найдена.", "bad"); return; }
+      checks.splice(idx, 1);
+      save(true);
+      syncViews();
+      toast("Запись удалена.", "warn");
+    }
+
     function wipe(){
-      const ok = confirm("Удалить все локальные данные по проверкам? Это действие нельзя отменить.");
+      const ok = confirm("Удалить все локальные данные по проверкам? Это действие нельзя отменить.\n\nРекомендуем сначала скачать JSON-бэкап через Экспорт.");
       if (!ok) return;
+      // auto-download backup before wiping
+      downloadBackupJSON();
       checks = [];
       try{ localStorage.removeItem(STORAGE_KEY); }catch(e){}
       save(true);
       syncViews();
-      toast("Данные очищены.", "warn");
+      toast("Данные очищены. JSON-бэкап был скачан автоматически.", "warn");
     }
 
     // ------------------------------------------------------------
@@ -2099,6 +2119,7 @@ async function exportWeekXlsx(){
       $("#miDownloadJson").addEventListener("click", () => { downloadBackupJSON(); exportMenuCtl?.menu?.classList.remove("open"); });
       $("#miImportJson").addEventListener("click", () => { triggerImportFile(); exportMenuCtl?.menu?.classList.remove("open"); });
       $("#miImportGithub").addEventListener("click", () => { importFromGithub(); exportMenuCtl?.menu?.classList.remove("open"); });
+      $("#miWipe").addEventListener("click", () => { wipe(); exportMenuCtl?.menu?.classList.remove("open"); });
       $("#importFileInput").addEventListener("change", (e) => {
         const file = e.target.files && e.target.files[0];
         if (!file) return;
@@ -2109,8 +2130,6 @@ async function exportWeekXlsx(){
 
       $("#filterSelect").addEventListener("change", () => { renderSources(); renderLog(); renderStats(); });
       $("#searchInput").addEventListener("input", () => { renderSources(); renderLog(); });
-
-      $("#btnWipe").addEventListener("click", wipe);
 
       $("#tabSources").addEventListener("click", () => setTab("sources"));
       $("#tabLog").addEventListener("click", () => setTab("log"));
@@ -2131,6 +2150,10 @@ async function exportWeekXlsx(){
         const mode = btn.getAttribute("data-mode");
         if (action === "quick-ok") addCheckQuick(sourceId);
         else if (action === "open-dlg") openDialog(sourceId, mode);
+        else if (action === "delete-check") {
+          const checkId = btn.getAttribute("data-check-id");
+          if (checkId && confirm("Удалить эту запись?")) deleteCheck(checkId);
+        }
       });
 
       // Hints
