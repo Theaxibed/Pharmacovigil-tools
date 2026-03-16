@@ -434,7 +434,6 @@
       opacity: .92;
     }
     .tag.bad::before{ background: var(--bg); opacity: .95; }
-}
 
     .card.compact .c-link,
     .card.compact .c-last{
@@ -1015,22 +1014,28 @@
       const d = new Date(iso);
       return `${pad2(d.getDate())}.${pad2(d.getMonth()+1)}.${d.getFullYear()}`;
     }
-    function weekWindowDays(){
-      const end = new Date();
-      end.setHours(23,59,59,999); // include full today
-      const start = new Date(end);
-      start.setDate(start.getDate() - 6);
+    function currentWeekWindow(){
+      const now = new Date();
+      const day = now.getDay(); // 0=Sun,1=Mon,...,6=Sat
+      const diffToMon = (day === 0) ? -6 : 1 - day; // days back to Monday
+      const start = new Date(now);
+      start.setDate(now.getDate() + diffToMon);
       start.setHours(0,0,0,0);
+      const end = new Date(start);
+      end.setDate(start.getDate() + 6); // Sunday
+      end.setHours(23,59,59,999);
       return { start, end };
     }
+    // Keep weekWindowDays as alias so exports (XLSX week) still work
+    function weekWindowDays(){ return currentWeekWindow(); }
     function isInLast7Days(isoDate){
-      const { start, end } = weekWindowDays();
+      const { start, end } = currentWeekWindow();
       const d = new Date(isoDate);
       d.setHours(0,0,0,0);
       return d >= start && d <= end;
     }
     function calcWeekLabel(){
-      const { start, end } = weekWindowDays();
+      const { start, end } = currentWeekWindow();
       const s = `${pad2(start.getDate())}.${pad2(start.getMonth()+1)}.${start.getFullYear()}`;
       const e = `${pad2(end.getDate())}.${pad2(end.getMonth()+1)}.${end.getFullYear()}`;
       return `${s} — ${e}`;
@@ -1245,6 +1250,16 @@
       const sorted = stableSortChecks(arr);
       return sorted[sorted.length - 1];
     }
+    function lastIssueNumber(sourceId){
+      // find the most recent check that has a non-empty issueNumber
+      const arr = checksForSource(sourceId);
+      if (!arr.length) return "";
+      const sorted = stableSortChecks(arr);
+      for (let i = sorted.length - 1; i >= 0; i--){
+        if (sorted[i].issueNumber && sorted[i].issueNumber.trim()) return sorted[i].issueNumber.trim();
+      }
+      return "";
+    }
     function weekChecks(sourceId){
       return checksForSource(sourceId).filter(c => isInLast7Days(c.date));
     }
@@ -1355,7 +1370,16 @@
         const lastStatus = last
           ? (last.status === "Новый выпуск" ? `<span class="tag warn">Новый выпуск</span>` : `<span class="tag ok">Проверено</span>`)
           : `<span class="tag bad">Нет записей</span>`;
-        const issuePart = last && last.issueNumber ? last.issueNumber : "—";
+
+        // last issue number — search all history, not just last check
+        const lastIssueNum = lastIssueNumber(s.id);
+        const lastIssueCheck = lastIssueNum
+          ? checksForSource(s.id).slice().sort((a,b) => (b.createdAt??0)-(a.createdAt??0))
+              .find(c => c.issueNumber && c.issueNumber.trim())
+          : null;
+        const issuePart = lastIssueNum
+          ? `${lastIssueNum}<span style="display:block;font-size:10px;color:var(--muted2);margin-top:3px;font-family:var(--mono);">${lastIssueCheck ? formatDateRU(lastIssueCheck.date) : ""}</span>`
+          : `<span style="color:var(--muted2);">—</span>`;
 
         
         if (compact) {
@@ -1417,7 +1441,7 @@
                 </div>
                 <div class="box">
                   <div class="lab">Выпуск (последний)</div>
-                  <div class="val">${escapeHtml(issuePart)}</div>
+                  <div class="val">${issuePart}</div>
                 </div>
                 <div class="box">
                   <div class="lab">Проверок за 7 дней</div>
