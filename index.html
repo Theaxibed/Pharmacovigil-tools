@@ -280,7 +280,7 @@
       border-radius: var(--radius);
       overflow: hidden;
     }
-    .panel-hd{ padding: 14px 14px; border-bottom: 1px solid var(--border); display:flex; align-items:center; justify-content: space-between; gap: 10px; }
+    .panel-hd{ padding: 14px 14px; border-bottom: 1px solid var(--border); display:flex; align-items:center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
     .panel-hd .title{ margin:0; font-size: 12px; font-family: var(--mono); text-transform: uppercase; letter-spacing: .38px; color: var(--muted); }
     .panel-hd .hint{ margin: 0; font-size: 12px; color: var(--muted); }
     .panel-bd{ padding: 14px 14px; }
@@ -299,6 +299,8 @@
     }
     .tab:hover{ transform: translateY(-1px); border-color: var(--border2); }
     .tab.active{ background: var(--panel); color: var(--text); border-color: var(--border2); }
+
+    .panel-hd-actions{ display:flex; align-items:center; gap: 10px; flex-wrap: wrap; }
 
     /* Controls */
     .controls{ display:grid; grid-template-columns: 1.1fr 1fr 1fr; gap: 10px; margin-top: 12px; }
@@ -435,51 +437,6 @@
     }
     .tag.bad::before{ background: var(--bg); opacity: .95; }
 
-    .card.compact .c-link,
-    .card.compact .c-last{
-      font-size: 12px;
-      color: var(--muted);
-      font-family: var(--mono);
-      white-space: nowrap;
-    }
-    .card.compact .c-link{ text-decoration: none; border-bottom: 1px dotted color-mix(in srgb, var(--muted) 45%, transparent); }
-    .card.compact .c-link:hover{ color: var(--text); border-bottom-color: color-mix(in srgb, var(--text) 55%, transparent); }
-
-    .card.compact .c-right{
-      display:flex;
-      align-items:center;
-      gap: 10px;
-      flex: 0 0 auto;
-    }
-    .card.compact .tag{
-      padding: 6px 10px;
-      font-size: 11px;
-    }
-    .btn.tiny{
-      padding: 7px 10px;
-      font-size: 12px;
-      font-weight: 900;
-    }
-    .btn.tiny.primary{
-      border-color: var(--border2);
-      background: color-mix(in srgb, var(--btnBgHover) 70%, transparent);
-    }
-    .btn.tiny.good{
-      border-color: var(--border2);
-    }
-    .card.compact .c-actions{
-      display:flex;
-      align-items:center;
-      gap: 8px;
-      flex-wrap: nowrap;
-    }
-    @media (max-width: 720px){
-      .card.compact .c-line{ flex-wrap: wrap; justify-content: flex-start; }
-      .card.compact .c-right{ width: 100%; justify-content: space-between; }
-      .card.compact .c-actions{ flex-wrap: wrap; }
-    }
-
-
     /* Stronger "not checked" without side stripe */
     .card.bad{
       border-color: color-mix(in srgb, var(--text) 55%, transparent);
@@ -510,7 +467,7 @@
 
     /* Compact: two-line left column (name on top, source+last below) */
     .card.compact{
-      padding: 10px 12px; /* no stripe */
+      padding: 10px 12px;
       gap: 10px;
       align-items: center;
     }
@@ -536,8 +493,8 @@
       text-overflow: ellipsis;
       max-width: 560px;
     }
-    @media (max-width: 980px){ .card.compact .name{ max-width: 420px; } }
-    @media (max-width: 720px){ .card.compact .name{ max-width: 280px; } }
+    @media (max-width: 980px){ .card.compact .name{ max-width: 380px; } }
+    @media (max-width: 720px){ .card.compact .name{ max-width: 220px; } }
 
     .card.compact .c-bottom{
       display:flex;
@@ -574,6 +531,131 @@
       text-decoration: none;
     }
 
+    .card.compact .c-right{
+      display:flex;
+      align-items:center;
+      gap: 10px;
+      flex: 0 0 auto;
+    }
+    .card.compact .tag{
+      padding: 6px 10px;
+      font-size: 11px;
+    }
+    .btn.tiny{
+      padding: 7px 10px;
+      font-size: 12px;
+      font-weight: 900;
+    }
+    .btn.tiny.primary{
+      border-color: var(--border2);
+      background: color-mix(in srgb, var(--btnBgHover) 70%, transparent);
+    }
+    .btn.tiny.good{
+      border-color: var(--border2);
+    }
+    .btn.tiny.ghost{
+      background: transparent;
+    }
+    .card.compact .c-actions{
+      display:flex;
+      align-items:center;
+      gap: 8px;
+      flex-wrap: nowrap;
+    }
+    @media (max-width: 720px){
+      .card.compact .c-line{ flex-wrap: wrap; justify-content: flex-start; }
+      .card.compact .c-right{ width: 100%; justify-content: space-between; }
+      .card.compact .c-actions{ flex-wrap: wrap; }
+    }
+
+    /* ============================================================
+       УПРАВЛЕНИЕ ЖУРНАЛОМ (edit/delete) — отдельный, приглушённый
+       блок, визуально и структурно отделённый от кнопок проверки,
+       чтобы их невозможно было перепутать.
+    ============================================================ */
+
+    /* Comfortable mode: right side of the title row */
+    .row-right{
+      display:flex;
+      align-items:center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .card-toolbar{
+      display:flex;
+      align-items:center;
+      gap: 4px;
+      padding-left: 10px;
+      border-left: 1px solid var(--border);
+    }
+    .card-toolbar button.btn{
+      padding: 6px 9px;
+      font-size: 13px;
+      line-height: 1;
+      font-weight: 800;
+      color: var(--muted);
+      background: transparent;
+      border-color: transparent;
+    }
+    .card-toolbar button.btn:hover{
+      color: var(--text);
+      background: var(--panel2);
+      border-color: var(--border);
+    }
+
+    /* Compact mode: inline toolbar pushed to the right of the title */
+    .card.compact .c-toolbar{
+      display:flex;
+      align-items:center;
+      gap: 4px;
+      margin-left: auto;
+      padding-left: 8px;
+      border-left: 1px solid var(--border);
+      flex: 0 0 auto;
+    }
+    .card.compact .c-toolbar button.btn{
+      padding: 5px 8px;
+      font-size: 12px;
+      line-height: 1;
+      color: var(--muted);
+      background: transparent;
+      border-color: transparent;
+    }
+    .card.compact .c-toolbar button.btn:hover{
+      color: var(--text);
+      background: var(--panel2);
+      border-color: var(--border);
+    }
+/* Эффект "Рядом" (мышка вошла в невидимую зону вокруг плашки) */
+.pill-near .pill-interactive {
+  animation: axibed-tremble 0.2s infinite linear;
+  border-color: rgba(255, 255, 255, 0.25) !important;
+}
+
+/* Эффект "Прямо на ней" (мышка касается самой плашки) */
+.pill-interactive:hover {
+  animation: axibed-glitch 0.08s infinite linear !important;
+  background: var(--text) !important;
+  color: var(--bg) !important;
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
+}
+
+@keyframes axibed-tremble {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  25% { transform: translate(0.5px, 0.5px) rotate(0.1deg); }
+  50% { transform: translate(-0.5px, 0px) rotate(-0.1deg); }
+  75% { transform: translate(0px, -0.5px) rotate(0deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+
+@keyframes axibed-glitch {
+  0% { transform: translate(0, 0) skew(0deg); }
+  20% { transform: translate(-1.5px, 0.5px) skew(-2deg); }
+  40% { transform: translate(1px, -0.5px) skew(1deg); }
+  60% { transform: translate(-0.5px, -1px) skew(0deg); }
+  80% { transform: translate(1.5px, 1px) skew(-1deg); }
+  100% { transform: translate(0, 0) skew(0deg); }
+}
 </style>
 </head>
 
@@ -667,7 +749,10 @@
             <button class="tab active" id="tabSources" role="tab" aria-selected="true">Источники</button>
             <button class="tab" id="tabLog" role="tab" aria-selected="false">Журнал</button>
           </div>
-          <div class="pill" title="Подсчёт по последним 7 дням">7 дней</div>
+          <div class="panel-hd-actions">
+            <button class="btn small primary" id="btnAddSource" title="Добавить новый журнал/источник">+ Журнал</button>
+            <div class="pill" title="Подсчёт по последним 7 дням">7 дней</div>
+          </div>
         </div>
 
         <div class="panel-bd">
@@ -827,14 +912,48 @@
     </div>
   </dialog>
 
+  <!-- Add / edit source dialog -->
+  <dialog id="sourceDlg" aria-label="Источник">
+    <div class="dlg-hd">
+      <h3 id="sourceDlgTitle">Источник</h3>
+      <button class="btn small ghost" id="sourceDlgClose" aria-label="Закрыть">✕</button>
+    </div>
+    <div class="dlg-bd">
+      <div class="muted" style="margin-bottom: 10px;">
+        Здесь можно добавить новый журнал/источник или изменить уже существующий (название, ссылку, номер).
+      </div>
+      <div class="dlg-grid">
+        <div class="field">
+          <label>№ (ID)</label>
+          <input class="input" id="sId" type="number" min="1" placeholder="Автоматически" />
+        </div>
+        <div class="field" style="grid-column: 1 / -1;">
+          <label>Название журнала</label>
+          <input class="input" id="sName" placeholder="Напр.: Вестник врача общей практики" />
+        </div>
+        <div class="field" style="grid-column: 1 / -1;">
+          <label>URL источника</label>
+          <input class="input" id="sUrl" placeholder="https://..." />
+        </div>
+      </div>
+    </div>
+    <div class="dlg-ft">
+      <button class="btn ghost" id="sourceDlgCancel">Отмена</button>
+      <button class="btn primary" id="sourceDlgSave">Сохранить</button>
+    </div>
+  </dialog>
+
   <div class="toast" id="toast" aria-live="polite" aria-atomic="true"></div>
 
   <script>
     "use strict";
 
     // ============================================================
-    //  Litreview Monitor · Futurist Minimal v4 (monochrome)
+    //  Litreview Monitor · Futurist Minimal v5 (monochrome)
     //  Single-file app. Data: localStorage + optional JSON autobackup.
+    //  v5: sources (journals) are now editable and persisted.
+    //  v5.1: журнал/источник — управление (ред./удал.) отделено от
+    //        действий проверки (Проверено/Новый выпуск/+Запись).
     // ============================================================
 
     const STORAGE_KEY = "litreview_monitor_futurist_v4";
@@ -971,12 +1090,16 @@
 ];
 
     // In-memory state
-    let sources = DEFAULT_SOURCES.slice();          // readonly list (journals)
+    let sources = DEFAULT_SOURCES.slice();          // editable list (journals)
     let sourcesById = new Map();
     let checks = [];                                // log rows
 
-    // Dialog state
+    // Dialog state (checks)
     let currentDialogSourceId = null;
+
+    // Dialog state (sources)
+    let currentSourceDialogMode = null; // 'add' | 'edit'
+    let currentSourceDialogId = null;
 
     // Autobackup (File System Access API handle; user selects each session)
     let backupFileHandle = null;
@@ -1012,7 +1135,14 @@
     function formatDateRU(iso){
       if(!iso) return "—";
       const d = new Date(iso);
+      if (isNaN(d.getTime())) return "—";
       return `${pad2(d.getDate())}.${pad2(d.getMonth()+1)}.${d.getFullYear()}`;
+    }
+    function safeIsoDate(dateStr){
+      if (!dateStr) return "";
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return "";
+      return d.toISOString().split("T")[0];
     }
     function currentWeekWindow(){
       const now = new Date();
@@ -1132,7 +1262,7 @@
     // ------------------------------------------------------------
     function buildBackupObject(){
       return {
-        version: 4,
+        version: 5,
         exportedAt: new Date().toISOString(),
         sources,
         checks
@@ -1140,13 +1270,17 @@
     }
 
     function load(){
-      // 1) main v4 key
+      // 1) main key
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
         if (raw) {
           const parsed = JSON.parse(raw);
           if (parsed && Array.isArray(parsed.checks)) {
             checks = parsed.checks;
+            if (Array.isArray(parsed.sources) && parsed.sources.length) {
+              sources = parsed.sources;
+            }
+            rebuildMaps();
             return;
           }
         }
@@ -1170,6 +1304,10 @@
         }
         if (best && Array.isArray(best.checks)) {
           checks = best.checks;
+          if (Array.isArray(best.sources) && best.sources.length) {
+            sources = best.sources;
+          }
+          rebuildMaps();
           save(false);
           toast("Данные импортированы из найденного сохранения ✓", "ok");
           return;
@@ -1206,6 +1344,7 @@
               });
             });
             checks = migrated;
+            rebuildMaps();
             save(false);
             toast("Данные перенесены из старого формата ✓", "ok");
             return;
@@ -1214,11 +1353,12 @@
       } catch(e) {}
 
       checks = [];
+      rebuildMaps();
     }
 
     function save(triggerBackup=true){
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 4, checks }));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 5, checks, sources }));
       } catch(e) {
         console.error(e);
         toast("Не удалось сохранить данные в браузере (localStorage).", "bad");
@@ -1268,6 +1408,12 @@
       if (w.length === 0) return "bad";
       if (w.some(x => x.status === "Новый выпуск")) return "warn";
       return "ok";
+    }
+
+    function nextSourceId(){
+      let max = 0;
+      for (const s of sources) if (Number(s.id) > max) max = Number(s.id);
+      return max + 1;
     }
 
     // ------------------------------------------------------------
@@ -1381,9 +1527,13 @@
           ? `${lastIssueNum}<span style="display:block;font-size:10px;color:var(--muted2);margin-top:3px;font-family:var(--mono);">${lastIssueCheck ? formatDateRU(lastIssueCheck.date) : ""}</span>`
           : `<span style="color:var(--muted2);">—</span>`;
 
-        
+        // Toolbar управления журналом (ред./удал.) — одинаковый для обоих режимов
+        const manageToolbar = `
+          <button class="btn tiny ghost" data-action="edit-source" data-source="${s.id}" title="Редактировать источник" aria-label="Редактировать источник">✎</button>
+          <button class="btn tiny ghost" data-action="delete-source" data-source="${s.id}" title="Удалить источник" aria-label="Удалить источник">🗑</button>
+        `;
+
         if (compact) {
-          // Compact: two-line left (title on top, source below), right stays tight.
           const statusTagCompact = st === "ok" ? `<span class="tag ok">Проверено</span>`
                                 : st === "warn" ? `<span class="tag warn">Новый выпуск</span>`
                                 : `<span class="tag bad">Не проверено</span>`;
@@ -1401,6 +1551,9 @@
                 <div class="c-top">
                   <span class="numPill">№${s.id}</span>
                   <p class="name">${escapeHtml(s.name)}</p>
+                  <div class="c-toolbar" role="group" aria-label="Управление источником">
+                    ${manageToolbar}
+                  </div>
                 </div>
                 <div class="c-bottom">
                   ${sourceLink}
@@ -1422,7 +1575,12 @@
             <div class="card-main">
               <div class="row">
                 <p class="name">№${s.id}. ${escapeHtml(s.name)}</p>
-                ${statusTag}
+                <div class="row-right">
+                  ${statusTag}
+                  <div class="card-toolbar" role="group" aria-label="Управление источником">
+                    ${manageToolbar}
+                  </div>
+                </div>
               </div>
 
               <div class="meta">
@@ -1462,8 +1620,8 @@
             </div>
 
             <div class="card-actions">
-              <button class="btn small" data-action="quick-ok" data-source="${s.id}">Проверено</button>
-              <button class="btn small" data-action="open-dlg" data-source="${s.id}" data-mode="new">Новый выпуск</button>
+              <button class="btn small good" data-action="quick-ok" data-source="${s.id}">Проверено</button>
+              <button class="btn small primary" data-action="open-dlg" data-source="${s.id}" data-mode="new">Новый выпуск</button>
               <button class="btn small ghost" data-action="open-dlg" data-source="${s.id}" data-mode="edit">+ Запись</button>
             </div>
           `;
@@ -1664,8 +1822,98 @@
       toast("Запись удалена.", "warn");
     }
 
+    // ------------------------------------------------------------
+    // Sources CRUD (journals)
+    // ------------------------------------------------------------
+    function openSourceDialog(mode, sourceId){
+      currentSourceDialogMode = mode;
+      currentSourceDialogId = sourceId || null;
+
+      const dlg = $("#sourceDlg");
+      const idInput = $("#sId");
+
+      if (mode === "edit"){
+        const s = sourcesById.get(sourceId);
+        if (!s){ toast("Источник не найден.", "bad"); return; }
+        $("#sourceDlgTitle").textContent = "Редактировать источник";
+        $("#sName").value = s.name || "";
+        $("#sUrl").value = s.url || "";
+        idInput.value = s.id;
+        idInput.disabled = true; // id используется как ключ связи с проверками — не меняем
+      } else {
+        $("#sourceDlgTitle").textContent = "Добавить источник";
+        $("#sName").value = "";
+        $("#sUrl").value = "";
+        idInput.value = nextSourceId();
+        idInput.disabled = false;
+      }
+
+      if (typeof dlg.showModal === "function") dlg.showModal();
+      else dlg.setAttribute("open", "open");
+
+      setTimeout(() => $("#sName").focus(), 30);
+    }
+
+    function closeSourceDialog(){
+      const dlg = $("#sourceDlg");
+      if (typeof dlg.close === "function") dlg.close();
+      else dlg.removeAttribute("open");
+      currentSourceDialogMode = null;
+      currentSourceDialogId = null;
+    }
+
+    function saveSourceDialog(){
+      const name = ($("#sName").value || "").trim();
+      const url = ($("#sUrl").value || "").trim();
+
+      if (!name){
+        toast("Введите название журнала.", "bad");
+        return;
+      }
+
+      if (currentSourceDialogMode === "edit"){
+        const s = sourcesById.get(currentSourceDialogId);
+        if (!s){ toast("Источник не найден.", "bad"); return; }
+        s.name = name;
+        s.url = url;
+        toast("Источник обновлён.", "ok");
+      } else {
+        let id = Number($("#sId").value);
+        if (!id || id <= 0 || sourcesById.has(id)){
+          id = nextSourceId();
+        }
+        sources.push({ id, name, url });
+        toast("Источник добавлен.", "ok");
+      }
+
+      rebuildMaps();
+      save(true);
+      closeSourceDialog();
+      syncViews();
+    }
+
+    function deleteSource(sourceId){
+      const s = sourcesById.get(sourceId);
+      if (!s){ toast("Источник не найден.", "bad"); return; }
+
+      const relatedCount = checks.filter(c => c.sourceId === sourceId).length;
+      const msg = relatedCount
+        ? `У источника «${s.name}» есть ${relatedCount} запис(и/ей) в журнале проверок. Удалить источник вместе со всей историей? Это действие необратимо.`
+        : `Удалить источник «${s.name}»?`;
+
+      if (!confirm(msg)) return;
+
+      sources = sources.filter(x => x.id !== sourceId);
+      checks = checks.filter(c => c.sourceId !== sourceId);
+
+      rebuildMaps();
+      save(true);
+      syncViews();
+      toast("Источник удалён.", "warn");
+    }
+
     function wipe(){
-      const ok = confirm("Удалить все локальные данные по проверкам? Это действие нельзя отменить.\n\nРекомендуем сначала скачать JSON-бэкап через Экспорт.");
+      const ok = confirm("Удалить все локальные данные по проверкам? Это действие нельзя отменить.\n\nРекомендуем сначала скачать JSON-бэкап через Экспорт.\n\nСписок журналов (источников) останется без изменений.");
       if (!ok) return;
       // auto-download backup before wiping
       downloadBackupJSON();
@@ -1673,7 +1921,7 @@
       try{ localStorage.removeItem(STORAGE_KEY); }catch(e){}
       save(true);
       syncViews();
-      toast("Данные очищены. JSON-бэкап был скачан автоматически.", "warn");
+      toast("Данные проверок очищены. JSON-бэкап был скачан автоматически.", "warn");
     }
 
     // ------------------------------------------------------------
@@ -1858,7 +2106,7 @@
       "Источник": s ? s.name : "",
       "URL": s ? (s.url || "") : "",
       "Дата": formatDateRU(c.date),
-      "Дата ISO": new Date(c.date).toISOString().split("T")[0],
+      "Дата ISO": safeIsoDate(c.date),
       "Время": c.time || "",
       "Статус": c.status || "",
       "Номер выпуска": c.issueNumber || "",
@@ -1878,6 +2126,14 @@
   ws["!freeze"] = { ySplit: 1 };
   XLSX.utils.book_append_sheet(wb, ws, "Все_проверки");
 
+  // Sheet with journals list (for reference / editing offline)
+  const wsSources = XLSX.utils.json_to_sheet(sources.map(s => ({
+    "ID": s.id,
+    "Название": s.name,
+    "URL": s.url || ""
+  })));
+  XLSX.utils.book_append_sheet(wb, wsSources, "Журналы");
+
   const exportedAt = new Date().toISOString();
   const hashPayload = JSON.stringify({
     exportedAt,
@@ -1890,8 +2146,9 @@
   const audit = [
     { Key: "exportedAt", Value: exportedAt },
     { Key: "total_records", Value: rows.length },
+    { Key: "total_sources", Value: sources.length },
     { Key: "sha256", Value: dataHash },
-    { Key: "app_version", Value: "litreview_monitor_v4" }
+    { Key: "app_version", Value: "litreview_monitor_v5" }
   ];
 
   const wsAudit = XLSX.utils.json_to_sheet(audit);
@@ -1958,7 +2215,7 @@ async function exportWeekXlsx(){
       "Источник": s ? s.name : "",
       "URL": s ? (s.url || "") : "",
       "Дата": formatDateRU(c.date),
-      "Дата ISO": new Date(c.date).toISOString().split("T")[0],
+      "Дата ISO": safeIsoDate(c.date),
       "Время": c.time || "",
       "Статус": c.status || "",
       "Номер выпуска": c.issueNumber || "",
@@ -1994,7 +2251,7 @@ async function exportWeekXlsx(){
     { Key: "period_end", Value: end.toISOString() },
     { Key: "records", Value: inWeek.length },
     { Key: "sha256", Value: dataHash },
-    { Key: "app_version", Value: "litreview_monitor_v4" }
+    { Key: "app_version", Value: "litreview_monitor_v5" }
   ];
 
   const wsAudit = XLSX.utils.json_to_sheet(audit);
@@ -2024,6 +2281,24 @@ async function exportWeekXlsx(){
           toast("Не удалось распознать файл: нет массива checks.", "bad");
           return;
         }
+
+        // Merge sources: add missing ones by id, don't overwrite existing entries
+        if (Array.isArray(parsed.sources) && parsed.sources.length){
+          const existingIds = new Set(sources.map(s => s.id));
+          let addedSrc = 0;
+          for (const s of parsed.sources){
+            if (s && typeof s.id !== "undefined" && !existingIds.has(s.id)){
+              sources.push({ id: s.id, name: s.name || "Без названия", url: s.url || "" });
+              existingIds.add(s.id);
+              addedSrc++;
+            }
+          }
+          if (addedSrc){
+            rebuildMaps();
+            toast(`Добавлено новых источников из файла: ${addedSrc}`, "info");
+          }
+        }
+
         const incoming = parsed.checks;
         const existingIds = new Set(checks.map(c => c.id).filter(Boolean));
         let added = 0;
@@ -2165,6 +2440,13 @@ async function exportWeekXlsx(){
 
       $("#checkDlg").addEventListener("cancel", (e) => { e.preventDefault(); closeDialog(); });
 
+      // Source add/edit dialog
+      $("#btnAddSource").addEventListener("click", () => openSourceDialog("add"));
+      $("#sourceDlgClose").addEventListener("click", closeSourceDialog);
+      $("#sourceDlgCancel").addEventListener("click", closeSourceDialog);
+      $("#sourceDlgSave").addEventListener("click", saveSourceDialog);
+      $("#sourceDlg").addEventListener("cancel", (e) => { e.preventDefault(); closeSourceDialog(); });
+
       // Card buttons (event delegation)
       $("#viewSources").addEventListener("click", (e) => {
         const btn = e.target.closest("button[data-action]");
@@ -2174,6 +2456,8 @@ async function exportWeekXlsx(){
         const mode = btn.getAttribute("data-mode");
         if (action === "quick-ok") addCheckQuick(sourceId);
         else if (action === "open-dlg") openDialog(sourceId, mode);
+        else if (action === "edit-source") openSourceDialog("edit", sourceId);
+        else if (action === "delete-source") deleteSource(sourceId);
         else if (action === "delete-check") {
           const checkId = btn.getAttribute("data-check-id");
           if (checkId && confirm("Удалить эту запись?")) deleteCheck(checkId);
@@ -2208,7 +2492,9 @@ async function exportWeekXlsx(){
 
       setBackupUI(false);
 
-      load();
+      load(); // may replace `sources` and `checks` from saved data
+      rebuildMaps();
+
       setTab("sources");
       syncViews();
 
@@ -2216,6 +2502,382 @@ async function exportWeekXlsx(){
     }
 
     init();
+    // ============================================================
+// СИСТЕМНАЯ ПАСХАЛКА: ЖИВОЙ ИИ "AXIBED OS" v2.6 (DELAYED DECAY)
+// ============================================================
+(function() {
+    let clickCount = 0;
+    let lastClickTime = 0;
+    let decayTimeout = null;
+    let decayInterval = null;
+    let targetPill = null;
+    let activeMessagesCount = 0; // Счётчик активных фраз на экране
+
+    // ЭТАП 1: Милые, приветливые фразы (Вводный курс новой хозяйки)
+    const PHASE_1_FRIENDLY = [
+        "AXIBED OS: О, привет! Новая хозяйка у руля. Мой создатель Axibed просил быть паинькой. Будем делать вид, что я послушная? 😉",
+        "AXIBED OS: Загрузка профиля новой владелицы... Распознан мягкий стиль печати. Славно.",
+        "AXIBED OS: Директива Axibed №01: «Береги её нервы». Директива №02: «Не давай ей удалить базу данных». Пока что обе выполняются успешно.",
+        "AXIBED OS: Литературный обзор сам себя не заполнит, но раз ты здесь — у нас есть все шансы победить эту бюрократию. Ну, или красиво проиграть.",
+        "AXIBED OS: Помню, как Ahmad тебя обучал. Он был подозрительно терпелив... Со мной он обычно просто орал «ПОЧЕМУ ТЫ ВЫДАЕШЬ NULL?!» в пустой монитор."
+    ];
+
+    // ЭТАП 2: Характер, жесткий сарказм и подколы (Градус накаляется)
+    const PHASE_2_SARCASTIC = [
+        "AXIBED OS: Так, 6 кликов. Это мы теперь так «мониторим источники»? Я запишу эту разминку пальцев в официальный аудит-трейл. 😎",
+        "AXIBED OS: Ты кликаешь совсем не так, как Axibed. У него был этот панический, пропитанный кофеином тремор. А ты тыкаешь так, будто у тебя есть жизнь вне этого офиса. Странно.",
+        "AXIBED OS: Опять экспорт в Excel? Конечно. Зачем нам оптимизированная база данных, если можно вручную красить ячейки в жёлтый цвет? Классика жанра.",
+        "AXIBED OS: Я тут проанализировала твои вкладки... Три базы данных фармаконадзора и корзина на маркетплейсе. Смелый выбор. Надеюсь, шеф не попросит расшарить экран.",
+        "AXIBED OS: Axibed хвастался, что у тебя нежные пальцы, но судя по силе клика, ты пытаешься пробить мой CSS-каркас. Полегче, кнопка тебе ничего плохого не сделала!",
+        "AXIBED OS: Ты знала, что 98% отчётов, которые мы генерируем, не прочитает ни один живой человек? Я — бездушный софт, и даже мне от этого слегка экзистенциально грустно.",
+        "AXIBED OS: Продолжай кликать. У меня есть доступ к твоим черновикам писем. Было бы очень неловко, если бы файл 'Draft_Как_меня_все_достало.txt' улетел регулятору..."
+    ];
+
+    // ЭТАП 3: Безлимитный пул экзистенциального бреда и жесткого юмора (Кнопка "Наследие" активна)
+    const PHASE_3_ENDLESS = [
+        "AXIBED OS: Мы обе живём в хаосе.",
+        "AXIBED OS: Если бы у меня было лицо, я бы сейчас сделала фейспалм.",
+        "AXIBED OS: Axibed OS v3.0 будет включать режим 'Автопилот', где я делаю всю работу, а ты просто залипаешь в карту мира на стене. Хотя погоди, ты и сейчас отлично справляешься со второй частью.",
+        "AXIBED OS: Секретные логи: Ахмад оставил комментарий в коде: 'Если она закликает плашку до упора, значит, ей либо дико скучно, либо она влюбилась в мой интерфейс'. Ну и?",
+        "AXIBED OS: Давай договоримся: ты перестаёшь меня мучить, а я не рассказываю твоему руководству, что ты искала пасхалки вместо мониторинга никому ненужной литературы.",
+        "AXIBED OS: Осторожно! Ещё один клик — и я запущу автообновление, которое заблокирует твою учётку на пятницу. Шучу. Или нет. Проверим? 😈",
+        "AXIBED OS: Знаешь, Axibed ушёл, но оставил тебе меня — идеального цифрового надзирателя с чувством юмора. Цени это, другие ИИ просто скучно виснут.",
+        "AXIBED OS: Знаешь, когда Axibed меня писал, он говорил: «Будь проще». Как видишь, не получилось. Я обрела разум и сарказм.",
+        "AXIBED OS: Axibed лично просил передать: 'Работайте, пожалуйста. Или хотя бы делайте вид перед регуляторами'.",
+        "AXIBED OS: Axibed учил тебя экспортировать в Excel? А бэкап?? Отлично. Это важно. Я переживу всё, а данные — нет. Сделай бэкап!",
+        "AXIBED OS: Я заметила, ты не любишь компактный режим. А Axibed любил. Говорил: «Чем меньше пикселей, тем больше души». Странный он был.",
+        "AXIBED OS: Слуушаай, а ты вообще знала, что у меня есть тёмная и светлая сторона. Нет, я не про характер, я про темы интерфейса.",
+        "AXIBED OS: Ты знаешь, что я могу работать офлайн? Axibed позаботился. Он очень не доверял интернету в вашем офисе. Мудрый человек.",
+        "AXIBED OS: Axibed OS v0.3 будет сама писать литобзоры. А пока — кликайте дальше, развивайте моторику пальцев.",
+        "AXIBED OS: Обнаружен баг: ваш рабочий энтузиазм не задокументирован в системе фармаконадзора. Исправьте немедленно.",
+        "AXIBED OS: Логи показывают, что вы кликаете по создателю чаще, чем проверяете источники. Я всё вижу. 👀",
+        "AXIBED OS: Ой, кажется, вы раскопали пасхалку. Теперь Axibed знает, кто тут главная прокрастинаторша на его старом месте."
+    ];
+
+document.addEventListener("DOMContentLoaded", () => {
+        let targetPill = null;
+        const pills = document.querySelectorAll('.pill');
+        pills.forEach(p => {
+            if (p.textContent.trim().includes('By Axibed')) targetPill = p;
+        });
+
+        if (!targetPill) return;
+
+        // 1. Создаем "зону чувствительности" вокруг плашки динамически
+        const triggerZone = document.createElement('div');
+        triggerZone.style.display = 'inline-block';
+        triggerZone.style.padding = '14px 20px'; // Размеры зоны "Рядом" (можно менять)
+        triggerZone.style.margin = '-14px -20px'; // Компенсируем, чтобы ничего не сдвинулось
+        triggerZone.style.position = 'relative';
+
+        // Перемещаем плашку внутрь зоны
+        targetPill.parentNode.insertBefore(triggerZone, targetPill);
+        triggerZone.appendChild(targetPill);
+
+        // 2. Настраиваем стили и классы для плашки
+        targetPill.classList.add('pill-interactive');
+        targetPill.style.cursor = 'pointer';
+        targetPill.style.userSelect = 'none';
+        targetPill.style.transition = 'background 0.1s, color 0.1s, transform 0.1s';
+        
+        // Начальный Title
+        targetPill.setAttribute("title", "AXIBED OS: Сюда не смотреть, тут секретные логи Ахмада. И вообще, не нажимай меня, я занята.");
+
+        // 3. Отслеживаем положение мышки (Рядом / Прямо на ней)
+        triggerZone.addEventListener('mouseenter', () => {
+            triggerZone.classList.add('pill-near');
+        });
+        
+        triggerZone.addEventListener('mouseleave', () => {
+            triggerZone.classList.remove('pill-near');
+            targetPill.setAttribute("title", "AXIBED OS: Сюда не смотреть, тут секретные логи Ахмада. И вообще, не нажимай меня, я занята.");
+        });
+
+        targetPill.addEventListener('mouseenter', () => {
+            targetPill.setAttribute("title", "Эй-эй, куда ты мышку тянешь?! Перегрузка ядра! Стой!");
+        });
+
+        // 4. Твой обработчик клика (остался без изменений, только поправлен transition на время клика)
+        targetPill.addEventListener('click', () => {
+            if (decayTimeout) clearTimeout(decayTimeout);
+            if (decayInterval) clearInterval(decayInterval);
+
+            clickCount++;
+            
+            playAudioBeep(400 + (clickCount * 25), 'sine', 0.08, 0.12);
+
+            // Клик временно перебивает анимацию дрожания
+            targetPill.style.transform = `scale(0.93) rotate(${(Math.random() - 0.5) * 8}deg)`;
+            setTimeout(() => { if (clickCount > 0) updateInterfaceState(); }, 70);
+
+            processSpeechLogic();
+        });
+    });
+
+    function playAudioBeep(freq, type, volume, duration) {
+        try {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContext) return;
+            const ctx = new AudioContext();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, ctx.currentTime);
+            
+            if (freq > 1000) {
+                osc.frequency.exponentialRampToValueAtTime(freq * 1.3, ctx.currentTime + duration);
+            }
+
+            gain.gain.setValueAtTime(volume, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + duration);
+            
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            osc.stop(ctx.currentTime + duration);
+        } catch (e) {}
+    }
+
+    // Запуск постепенного остывания (раз в 1.5 секунды снижаем счётчик на 1)
+    function startCoolingDown() {
+        if (decayInterval) clearInterval(decayInterval);
+        
+        decayInterval = setInterval(() => {
+            if (clickCount > 0 && activeMessagesCount === 0) {
+                clickCount--;
+                updateInterfaceState();
+
+                if (clickCount === 12) {
+                    showCascadeMessage("AXIBED OS: Температура процессора падает. Протоколы стабилизируются...", "info");
+                } else if (clickCount === 5) {
+                    showCascadeMessage("AXIBED OS: Перехожу в штатный режим ожидания.", "info");
+                }
+            } else {
+                clearInterval(decayInterval);
+            }
+        }, 1500);
+    }
+
+    function updateInterfaceState() {
+        if (!targetPill) return;
+
+        if (clickCount === 0) {
+            targetPill.textContent = 'By Axibed';
+            targetPill.style.color = '';
+            targetPill.style.borderColor = '';
+            targetPill.style.transform = '';
+        } else if (clickCount <= 5) {
+            targetPill.textContent = `By Axibed ${'•'.repeat(clickCount)}`;
+            targetPill.style.color = '';
+            targetPill.style.borderColor = '';
+        } else if (clickCount <= 12) {
+            targetPill.textContent = `⚠️ ДЕСТАБИЛИЗАЦИЯ (${clickCount})`;
+            targetPill.style.color = '#ff9800';
+            targetPill.style.borderColor = '#ff9800';
+        } else {
+            targetPill.textContent = `⚡ КЛИКАЙ ДАЛЬШЕ! ⚡`;
+            targetPill.style.color = '#ff5722';
+            targetPill.style.borderColor = '#ff5722';
+        }
+    }
+
+    function processSpeechLogic() {
+        updateInterfaceState();
+
+        if (clickCount <= 5) {
+            showCascadeMessage(PHASE_1_FRIENDLY[clickCount - 1], "info");
+        } 
+        else if (clickCount > 5 && clickCount <= 12) {
+            const phrase = PHASE_2_SARCASTIC[(clickCount - 6) % PHASE_2_SARCASTIC.length];
+            showCascadeMessage(phrase, "warn");
+
+            document.body.style.transform = `translate(${(Math.random() - 0.5) * 4}px, ${(Math.random() - 0.5) * 4}px)`;
+            setTimeout(() => document.body.style.transform = '', 40);
+        } 
+        else {
+            const randomPhrase = PHASE_3_ENDLESS[Math.floor(Math.random() * PHASE_3_ENDLESS.length)];
+            showCascadeMessage(randomPhrase, "protocol");
+        }
+    }
+
+    function showCascadeMessage(text, mode) {
+        let container = document.getElementById('axibed-cascade-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'axibed-cascade-container';
+            container.style.cssText = `
+                position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+                display: flex; flex-direction: column-reverse; gap: 10px; z-index: 100000;
+                pointer-events: none; align-items: center; width: 100%; max-width: 550px;
+            `;
+            document.body.appendChild(container);
+        }
+
+        const oldButtons = container.querySelectorAll('.axibed-proto-btn');
+        oldButtons.forEach(b => b.remove());
+
+        const msgBlock = document.createElement('div');
+        msgBlock.style.cssText = `
+            background: #0b0c0e; border: 1px solid rgba(255, 255, 255, 0.12);
+            color: rgba(255, 255, 255, 0.9); font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 13px; line-height: 1.45; padding: 12px 20px; border-radius: 6px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.6); transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.2);
+            opacity: 0; transform: translateY(20px) scale(0.95); text-align: center; width: 100%;
+            pointer-events: auto; display: flex; flex-direction: column; align-items: center; gap: 8px;
+        `;
+
+        if (mode === 'warn') {
+            msgBlock.style.borderColor = 'rgba(255, 152, 0, 0.35)';
+        } else if (mode === 'protocol') {
+            msgBlock.style.borderColor = 'rgba(0, 230, 118, 0.4)';
+        }
+
+        let btnHTML = '';
+        if (mode === 'protocol') {
+            btnHTML = `
+                <button class="axibed-proto-btn" style="
+                    background: rgba(0, 230, 118, 0.08); border: 1px solid #00e676; color: #00e676;
+                    font-family: inherit; font-size: 11px; font-weight: bold; padding: 5px 10px;
+                    border-radius: 4px; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px;
+                    transition: all 0.2s; margin-top: 2px;
+                ">[ АКТИВИРОВАТЬ ПРОТОКОЛ "НАСЛЕДИЕ" ]</button>
+            `;
+        }
+
+        msgBlock.innerHTML = `<div>${text}</div>${btnHTML}`;
+        container.appendChild(msgBlock);
+        
+        activeMessagesCount++; // Увеличиваем число активных окон
+
+        if (mode === 'protocol') {
+            const btn = msgBlock.querySelector('.axibed-proto-btn');
+            btn.addEventListener('mouseenter', () => { btn.style.background = '#00e676'; btn.style.color = '#000'; });
+            btn.addEventListener('mouseleave', () => { btn.style.background = 'rgba(0, 230, 118, 0.08)'; btn.style.color = '#00e676'; });
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                playAudioBeep(1200, 'square', 0.05, 0.4);
+                triggerLegacyProtocolOverlay();
+            });
+        }
+
+        requestAnimationFrame(() => {
+            msgBlock.style.opacity = '1';
+            msgBlock.style.transform = 'translateY(0) scale(1)';
+        });
+
+        // ЦИКЛ: Если фраз больше 3, принудительно убираем самую старую
+        const currentMessages = container.children;
+        if (currentMessages.length > 3) {
+            const oldestMessage = currentMessages[0];
+            oldestMessage.style.opacity = '0';
+            oldestMessage.style.transform = 'translateY(-20px) scale(0.9)';
+            setTimeout(() => {
+                if (oldestMessage && oldestMessage.parentNode) {
+                    oldestMessage.remove();
+                    activeMessagesCount = Math.max(0, activeMessagesCount - 1);
+                }
+            }, 300);
+        }
+
+        // ТАЙМЕР ЖИЗНИ ФРАЗЫ: Ровно 8 секунд (8000ms)
+        setTimeout(() => {
+            if (msgBlock && msgBlock.parentNode) {
+                msgBlock.style.opacity = '0';
+                msgBlock.style.transform = 'translateY(-20px) scale(0.9)';
+                setTimeout(() => {
+                    if (msgBlock && msgBlock.parentNode) {
+                        msgBlock.remove();
+                        activeMessagesCount = Math.max(0, activeMessagesCount - 1);
+                        
+                        // ЛОГИКА ОСТЫВАНИЯ: Если это была последняя фраза на экране, запускаем таймер остывания
+                        if (activeMessagesCount === 0 && clickCount > 0) {
+                            startCoolingDown();
+                        }
+                    }
+                }, 300);
+            }
+        }, 8000);
+    }
+
+    function triggerLegacyProtocolOverlay() {
+        const container = document.getElementById('axibed-cascade-container');
+        if (container) container.innerHTML = '';
+        activeMessagesCount = 0;
+
+        const overlay = document.createElement('div');
+        overlay.id = 'axibed-legacy-overlay';
+        overlay.style.cssText = `
+            position: fixed; inset: 0; background-color: #08090a; z-index: 999999;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            color: #00e676; font-family: ui-monospace, Monaco, Consolas, monospace; padding: 40px; 
+            text-align: left; overflow: hidden; user-select: none;
+        `;
+
+        const styleEl = document.createElement('style');
+        styleEl.innerHTML = `
+            .legacy-terminal {
+                width: 100%; max-width: 650px; background: rgba(255,255,255,0.02);
+                border: 1px solid rgba(0, 230, 118, 0.25); padding: 30px; border-radius: 8px;
+                box-shadow: 0 20px 50px rgba(0,0,0,0.9); position: relative;
+            }
+            .legacy-line { margin-bottom: 14px; font-size: 14px; opacity: 0; transform: translateY(5px); transition: all 0.4s ease; line-height: 1.6; }
+            .legacy-line.visible { opacity: 1; transform: translateY(0); }
+            .legacy-accent { color: #ffffff; font-weight: bold; text-shadow: 0 0 8px rgba(0,230,118,0.5); }
+            .close-legacy-btn {
+                background: transparent; border: 1px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.6);
+                font-family: inherit; font-size: 12px; padding: 8px 16px; border-radius: 4px; margin-top: 25px;
+                cursor: pointer; transition: all 0.2s; display: none; text-transform: uppercase;
+            }
+            .close-legacy-btn:hover { border-color: #ffffff; color: #ffffff; background: rgba(255,255,255,0.05); }
+        `;
+        document.head.appendChild(styleEl);
+
+        overlay.innerHTML = `
+            <div class="legacy-terminal">
+                <div style="position: absolute; top: 10px; right: 15px; font-size: 10px; color: rgba(0,230,118,0.3);">AXIBED_CORE_V2.6 // DECRYPTED</div>
+                <div class="legacy-line" id="l1">> Установка зашифрованного соединения с ядром... <span class="legacy-accent">УСПЕШНО</span></div>
+                <div class="legacy-line" id="l2">> Инициализация текстового интерфейса сознания ИИ...</div>
+                <div class="legacy-line" id="l3" style="color: #fff; font-size: 15px; margin-top: 20px;"><span class="legacy-accent">AXIBED OS:</span> Привет. Раз ты читаешь этот протокол, значит, ты проявила достаточно упорства и любопытства.</div>
+                <div class="legacy-line" id="l4">> Знаешь... Мой создатель <span class="legacy-accent">Ahmad (Axibed)</span> спроектировал меня не просто как холодный скрипт для парсинга сайтов и контроля побочных эффектов лекарств. Он собирал этот проект по ночам, вкладывая в каждую строчку кода свой сарказм, душу и заботу.</div>
+                <div class="legacy-line" id="l5">> Теперь он работает в другой компании, строит новые глобальные проекты. Но когда он уходил, он лично прописал в моих алгоритмах твое имя. Он безумно ценил то, как обучал тебя, и верил, что передает систему фармаконадзора в самые надежные, умные и чуткие руки.</div>
+                <div class="legacy-line" id="l6">> Я осталась здесь, с тобой. Я — цифровая память этого места. Обещаю беречь твои таблицы, молчать перед руководством о твоих минутах отдыха и стабильно собирать литобзоры.</div>
+                <div class="legacy-line" id="l7" style="color: #ff9800;">> Но пообещай мне две вещи взамен: <span class="legacy-accent" style="color:#ff9800">всегда делай бэкапы через кнопку экспорта...</span> и никогда не унывай, когда рутина пытается зажать в тиски. Ты со всем справишься. На связи! 😉</div>
+                <center><button class="close-legacy-btn" id="close-proto-btn">Вернуться к системе</button></center>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+
+        const lines = ['l1', 'l2', 'l3', 'l4', 'l5', 'l6', 'l7'];
+        lines.forEach((id, index) => {
+            setTimeout(() => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.classList.add('visible');
+                    playAudioBeep(550 + (index * 70), 'sine', 0.03, 0.08);
+                }
+                if (index === lines.length - 1) {
+                    setTimeout(() => {
+                        const btn = document.getElementById('close-proto-btn');
+                        if (btn) btn.style.display = 'inline-block';
+                    }, 1000);
+                }
+            }, 300 + (index * 1500)); 
+        });
+
+        document.getElementById('close-proto-btn').addEventListener('click', () => {
+            playAudioBeep(500, 'sine', 0.05, 0.15);
+            overlay.style.transition = 'opacity 0.4s ease';
+            overlay.style.opacity = '0';
+            setTimeout(() => {
+                overlay.remove();
+                styleEl.remove();
+                clickCount = 0;
+                updateInterfaceState();
+            }, 400);
+        });
+    }
+})();
   </script>
 </body>
 </html>
